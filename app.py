@@ -1,4 +1,4 @@
-"""Sanskritam AI v0.9 — beginner-friendly Streamlit hackathon app."""
+"""Sanskritam AI v1.0 — beginner-friendly Streamlit hackathon app."""
 import json
 import html
 import os
@@ -52,6 +52,7 @@ div[data-testid="stButton"] button[kind="secondary"]:hover{border-color:#267344;
 .result-heading.blue{border-left-color:#215db4;border-top:0}
 .result-heading.purple{border-left-color:#7b3591;border-top:0}
 .result-intro{color:#46584e;margin-bottom:.65rem;font-size:.95rem}
+.hindi-result{font-family:'Noto Sans Devanagari',sans-serif;font-size:1.3rem;line-height:1.9;background:#fff8e9;border-color:#e5d1a4;color:#423115}
 .translation-result{background:#f0f8f2;border:1px solid #bed9c6;
   border-radius:14px;padding:1.25rem 1.35rem;font-size:1.2rem;line-height:1.7;
   color:#153e2c;margin:.6rem 0 1rem}
@@ -87,7 +88,7 @@ def api_key():
 
 def translate(source: str, direction: str) -> dict:
     schema = {
-        "natural_translation": "string", "literal_translation": "string",
+        "natural_translation": "string", "hindi_translation": "string", "literal_translation": "string",
         "words": [{"word": "string", "meaning": "string", "grammar": "string", "note": "string", "lemma": "string", "case": "string", "number": "string", "gender": "string", "part_of_speech": "string"}],
         "grammar_explanation": "string", "sandhi_explanation": "string",
         "ambiguities": "string", "learning_tip": "string"
@@ -95,6 +96,10 @@ def translate(source: str, direction: str) -> dict:
     instructions = (
         "You are a careful Classical Sanskrit tutor. Respond with ONLY a valid JSON object, "
         "no Markdown fences. Follow the example shape supplied. "
+        "Always provide a natural Hindi translation in hindi_translation using fluent Devanagari Hindi. "
+        "For Sanskrit-to-English, translate the Sanskrit source directly into Hindi, not via English. "
+        "For English-to-Sanskrit, hindi_translation should translate the generated Sanskrit into Hindi. "
+        "natural_translation is English when direction is Sanskrit-to-English and Sanskrit when direction is English-to-Sanskrit. "
         "For Sanskrit-to-English, words are Sanskrit tokens or clearly identified segments. "
         "For English-to-Sanskrit, words are the Sanskrit words you generate. "
         "Do not fabricate sources. Clearly state uncertainty for ambiguous sandhi, "
@@ -155,6 +160,12 @@ else:
     st.markdown('<p class="result-intro">Start with the meaning, then explore how each word works.</p>', unsafe_allow_html=True)
     st.markdown("**Natural translation**")
     st.markdown('<div class="translation-result">' + html.escape(str(data.get("natural_translation") or "Not available")) + '</div>', unsafe_allow_html=True)
+    st.markdown("**हिन्दी अनुवाद · Hindi translation**")
+    hindi = str(data.get("hindi_translation") or "").strip()
+    if hindi:
+        st.markdown('<div class="translation-result hindi-result" lang="hi">' + html.escape(hindi) + '</div>', unsafe_allow_html=True)
+    else:
+        st.info("Hindi translation is unavailable for this result. Translate again to generate it.")
     st.markdown("**Literal translation**")
     st.write(str(data.get("literal_translation") or "Not available"))
     ambiguities = str(data.get("ambiguities") or "").strip()
@@ -246,4 +257,4 @@ if data:
 
 
 st.divider()
-st.caption("Sanskritam AI · Ancient Wisdom. Modern Intelligence. · sanskritam.ai · Hackathon v0.9")
+st.caption("Sanskritam AI · Ancient Wisdom. Modern Intelligence. · sanskritam.ai · Hackathon v1.0")
