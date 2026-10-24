@@ -27,7 +27,7 @@ textarea {font-family:'Noto Sans Devanagari','Inter',sans-serif!important;font-s
 @media (max-width:640px) {.block-container {padding:1rem;} .hero {padding:1rem 0;}}
 </style>''', unsafe_allow_html=True)
 
-st.markdown('<div class="brand">संस्कृतम् AI &nbsp; | &nbsp; Sanskritam AI</div>', unsafe_allow_html=True)
+st.markdown('<div class="brand"><br/>संस्कृतम् AI &nbsp; | &nbsp; Sanskritam AI</div>', unsafe_allow_html=True)
 st.markdown('''<div class="hero"><div class="eyebrow">TRANSLATE · UNDERSTAND · EXPLORE</div>
 <h1>Discover the Beauty of Sanskrit</h1>
 <p>Ancient Wisdom. Modern Intelligence.<br>Understand the meaning behind every word.</p></div>''', unsafe_allow_html=True)
