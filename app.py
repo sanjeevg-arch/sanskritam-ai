@@ -1,4 +1,4 @@
-"""Sanskritam AI v0.4 — beginner-friendly Streamlit hackathon app."""
+"""Sanskritam AI v0.6 — beginner-friendly Streamlit hackathon app."""
 import json
 import os
 from pathlib import Path
@@ -38,6 +38,13 @@ textarea{font:1.22rem/1.8 'Noto Sans Devanagari','DM Sans',sans-serif!important}
 .wordcard .dev{font:700 1.5rem 'Noto Sans Devanagari',sans-serif;color:#164d32}
 .wordcard .meaning{font-weight:700;color:#263b31;margin:.4rem 0}.wordcard .meta{font-size:.88rem;color:#43594e}
 .stTabs [role="tab"]{font-weight:700}.note{color:#44584c;font-size:.9rem}
+[data-testid="stTabs"] [role="tablist"]{gap:.6rem;flex-wrap:wrap;border-bottom:0}
+[data-testid="stTabs"] button[role="tab"]{background:#fffefa;border:1px solid #e7dac1;border-top:5px solid #bd7c20;border-radius:13px;padding:.85rem 1.1rem;min-height:65px;color:#25372f!important;font-size:1rem}
+[data-testid="stTabs"] button[role="tab"]:nth-child(2){border-top-color:#267344}
+[data-testid="stTabs"] button[role="tab"]:nth-child(3){border-top-color:#215db4}
+[data-testid="stTabs"] button[role="tab"]:nth-child(4){border-top-color:#7b3591}
+[data-testid="stTabs"] button[role="tab"][aria-selected="true"]{background:#eaf4ee;border-bottom:3px solid #175b3d;box-shadow:0 3px 12px #123a241c}
+[data-testid="stTabs"] [role="tabpanel"]{padding-top:1.4rem}
 @media(max-width:750px){.block-container{padding:1rem .8rem}.features{grid-template-columns:repeat(2,1fr)}.hero{padding:1.5rem 1rem}}
 @media(prefers-reduced-motion:reduce){*,*:before,*:after{animation:none!important;transition:none!important}}
 </style>""", unsafe_allow_html=True)
@@ -49,7 +56,7 @@ with header_logo:
 with header_name:
     st.markdown('<div class="brand">संस्कृतम् AI · Sanskritam AI<small>DISCOVER · TRANSLATE · UNDERSTAND</small></div>', unsafe_allow_html=True)
 st.markdown('<section class="hero"><div class="kicker">ANCIENT WISDOM · MODERN INTELLIGENCE</div><h1>Discover the Beauty of Sanskrit</h1><p>Translate across languages, explore each word, and learn the grammar behind the meaning.</p></section>', unsafe_allow_html=True)
-st.markdown('<div class="features"><div class="feature gold"><strong>✦ Translation</strong><small>Natural and literal meaning</small></div><div class="feature green"><strong>🌿 Word Explorer</strong><small>Understand each word</small></div><div class="feature blue"><strong>▦ Grammar</strong><small>Learn the structure</small></div><div class="feature purple"><strong>ॐ Sandhi</strong><small>Explore word connections</small></div></div>', unsafe_allow_html=True)
+
 
 EXAMPLES = {
     "Simple sentence": "रामः पुस्तकं पठति।",
@@ -98,55 +105,54 @@ def translate(source: str, direction: str) -> dict:
 
 
 st.subheader("Translation workspace")
-left, right = st.columns([1, 1], gap="large")
-with left:
-    with st.container(border=True):
-        direction = st.radio("Translation direction", ["Sanskrit → English", "English → Sanskrit"], horizontal=True)
-        example = st.selectbox("Try an example", ["Your own text", *EXAMPLES]) if direction.startswith("Sanskrit") else "Your own text"
-        starter = EXAMPLES.get(example, "") if direction.startswith("Sanskrit") else ""
-        if st.session_state.get("last_example") != (direction, example):
-            st.session_state["source_text"] = starter
-            st.session_state["last_example"] = (direction, example)
-        source = st.text_area("Enter text", key="source_text", height=185, max_chars=1600,
-                              placeholder="Type or paste Sanskrit here…" if direction.startswith("Sanskrit") else "Type English here…")
-        learn = st.toggle("Beginner learning mode", value=True, help="Show word cards and an extra learning tip.")
-        submitted = st.button("✦ Translate & Analyze", type="primary", use_container_width=True)
-        st.caption("AI-generated explanations may contain mistakes. Verify important interpretations.")
+with st.container(border=True):
+    direction = st.radio("Translation direction", ["Sanskrit → English", "English → Sanskrit"], horizontal=True)
+    example = st.selectbox("Try an example", ["Your own text", *EXAMPLES]) if direction.startswith("Sanskrit") else "Your own text"
+    starter = EXAMPLES.get(example, "") if direction.startswith("Sanskrit") else ""
+    if st.session_state.get("last_example") != (direction, example):
+        st.session_state["source_text"] = starter
+        st.session_state["last_example"] = (direction, example)
+    source = st.text_area("Enter text", key="source_text", height=150, max_chars=1600,
+                          placeholder="Type or paste Sanskrit here…" if direction.startswith("Sanskrit") else "Type English here…")
+    learn = st.toggle("Beginner learning mode", value=True, help="Show word cards and an extra learning tip.")
+    submitted = st.button("✦ Translate & Analyze", type="primary", use_container_width=True)
+    st.caption("AI-generated explanations may contain mistakes. Verify important interpretations.")
 
-with right:
-    with st.container(border=True):
-        st.markdown("### Translation result")
-        if submitted:
-            if not source.strip():
-                st.warning("Enter text before translating.")
-            elif not api_key():
-                st.error("API key not found. Add OPENAI_API_KEY to your local .env or Streamlit Cloud secrets.")
-            else:
-                with st.spinner("Translating and analyzing…"):
-                    try:
-                        st.session_state["result"] = translate(source.strip(), direction)
-                        st.session_state["last_source"] = source.strip()
-                        st.session_state["last_direction"] = direction
-                    except (ValueError, json.JSONDecodeError):
-                        st.error("The AI response was incomplete. Please try again.")
-                    except Exception as exc:
-                        st.error("Could not translate. Check your API key, billing, and internet connection.")
-                        st.caption(f"Error category: {type(exc).__name__}")
-        data = st.session_state.get("result")
-        if data:
-            st.markdown("**Natural translation**")
-            st.success(str(data.get("natural_translation", "Not available")))
-            st.markdown("**Literal translation**")
-            st.write(str(data.get("literal_translation", "Not available")))
-            st.download_button("↓ Download analysis (JSON)", data=json.dumps(data, ensure_ascii=False, indent=2),
-                               file_name="sanskritam-analysis.json", mime="application/json")
-        else:
-            st.info("Your translation will appear here after you select Translate & Analyze.")
-
-if data:
-    st.subheader("Explore the meaning")
-    words_tab, grammar_tab, sandhi_tab, alternatives_tab = st.tabs(["🌿 Words", "▦ Grammar", "ॐ Sandhi", "✦ Alternatives"])
-    with words_tab:
+if submitted:
+    if not source.strip():
+        st.warning("Enter text before translating.")
+    elif not api_key():
+        st.error("API key not found. Add OPENAI_API_KEY to your local .env or Streamlit Cloud secrets.")
+    else:
+        with st.spinner("Translating and analyzing…"):
+            try:
+                st.session_state["result"] = translate(source.strip(), direction)
+                st.session_state["last_source"] = source.strip()
+                st.session_state["last_direction"] = direction
+            except (ValueError, json.JSONDecodeError):
+                st.error("The AI response was incomplete. Please try again.")
+            except Exception as exc:
+                st.error("Could not translate. Check your API key, billing, and internet connection.")
+                st.caption(f"Error category: {type(exc).__name__}")
+data = st.session_state.get("result")
+st.subheader("Explore your results")
+translation_tab, words_tab, grammar_tab, sandhi_tab = st.tabs([
+    "✦ Translation", "🌿 Word Explorer", "▦ Grammar", "🔗 Sandhi"
+])
+with translation_tab:
+    if data:
+        st.markdown("### Natural translation")
+        st.success(str(data.get("natural_translation", "Not available")))
+        st.markdown("### Literal translation")
+        st.write(str(data.get("literal_translation", "Not available")))
+        st.markdown("### Alternative interpretations")
+        st.write(str(data.get("ambiguities", "No alternatives identified.")))
+        st.download_button("↓ Download analysis (JSON)", data=json.dumps(data, ensure_ascii=False, indent=2),
+                           file_name="sanskritam-analysis.json", mime="application/json")
+    else:
+        st.info("Enter a passage above and choose Translate & Analyze to see your results.")
+with words_tab:
+    if data:
         words = data.get("words", [])
         if learn:
             st.caption("Word cards help you study one form at a time. AI analyses require verification.")
@@ -165,42 +171,50 @@ if data:
             st.dataframe([{"Word": x.get("word", ""), "Meaning": x.get("meaning", ""),
                            "Grammar": x.get("grammar", "")} for x in words],
                          use_container_width=True, hide_index=True)
-    with grammar_tab:
+        st.markdown("### 🔎 Guided word explorer")
+        available = [w for w in data.get("words", []) if isinstance(w, dict) and w.get("word")]
+        if available:
+            choices = list(range(len(available)))
+            selection = st.selectbox("Choose a Sanskrit word to explore", choices,
+                                     format_func=lambda i: f"{i + 1}. {available[i]['word']}")
+            item = available[selection]
+            details = {
+                "Word": item.get("word", "—"), "Meaning": item.get("meaning", "—"),
+                "Root / lemma (AI)": item.get("lemma", "—"), "Part of speech (AI)": item.get("part_of_speech", "—"),
+                "Case (AI)": item.get("case", "—"), "Number (AI)": item.get("number", "—"),
+                "Gender (AI)": item.get("gender", "—"), "Grammar note (AI)": item.get("grammar", "—")
+            }
+            for label, value in details.items():
+                st.markdown(f"**{label}:** {value}")
+            reference = lookup(str(item.get("word", "")))
+            if reference:
+                st.success("Reference entry available: exact word form matched in the small curated demo lexicon.")
+                st.json(reference)
+            else:
+                st.info("No curated reference for this exact form. The analysis above is AI-generated and unverified.")
+
+        with st.expander("📖 Reference cross-check (limited demo coverage)"):
+            matches = compare_words(data.get("words", []))
+            st.write(f"Exact forms found in curated demo lexicon: {len(matches)} / {len(available)}")
+            if matches:
+                for match in matches:
+                    st.markdown(f"**{match['word']}** — {match['reference']['meaning']} · {match['reference']['note']}")
+            st.caption("A dictionary lookup is not a full morphological validation. This prototype does not yet integrate a general Sanskrit morphological parser. Sandhi and ambiguous forms still require expert review.")
+
+    else:
+        st.info("Translate a passage to explore this section.")
+with grammar_tab:
+    if data:
         st.write(str(data.get("grammar_explanation", "No explanation provided.")))
-    with sandhi_tab:
+    else:
+        st.info("Translate a passage to explore this section.")
+with sandhi_tab:
+    if data:
         st.write(str(data.get("sandhi_explanation", "No sandhi analysis provided.")))
-    with alternatives_tab:
-        st.write(str(data.get("ambiguities", "No alternatives identified.")))
-    st.markdown("### 🔎 Guided word explorer")
-    available = [w for w in data.get("words", []) if isinstance(w, dict) and w.get("word")]
-    if available:
-        choices = list(range(len(available)))
-        selection = st.selectbox("Choose a Sanskrit word to explore", choices,
-                                 format_func=lambda i: f"{i + 1}. {available[i]['word']}")
-        item = available[selection]
-        details = {
-            "Word": item.get("word", "—"), "Meaning": item.get("meaning", "—"),
-            "Root / lemma (AI)": item.get("lemma", "—"), "Part of speech (AI)": item.get("part_of_speech", "—"),
-            "Case (AI)": item.get("case", "—"), "Number (AI)": item.get("number", "—"),
-            "Gender (AI)": item.get("gender", "—"), "Grammar note (AI)": item.get("grammar", "—")
-        }
-        for label, value in details.items():
-            st.markdown(f"**{label}:** {value}")
-        reference = lookup(str(item.get("word", "")))
-        if reference:
-            st.success("Reference entry available: exact word form matched in the small curated demo lexicon.")
-            st.json(reference)
-        else:
-            st.info("No curated reference for this exact form. The analysis above is AI-generated and unverified.")
+    else:
+        st.info("Translate a passage to explore this section.")
 
-    with st.expander("📖 Reference cross-check (limited demo coverage)"):
-        matches = compare_words(data.get("words", []))
-        st.write(f"Exact forms found in curated demo lexicon: {len(matches)} / {len(available)}")
-        if matches:
-            for match in matches:
-                st.markdown(f"**{match['word']}** — {match['reference']['meaning']} · {match['reference']['note']}")
-        st.caption("A dictionary lookup is not a full morphological validation. This prototype does not yet integrate a general Sanskrit morphological parser. Sandhi and ambiguous forms still require expert review.")
-
+if data:
     with st.expander("📝 Report an issue with this translation"):
         with st.form("translation_feedback", clear_on_submit=True):
             rating = st.radio("Was this result helpful?", ["Yes", "Partly", "No"], horizontal=True)
@@ -218,5 +232,6 @@ if data:
 
     st.warning("Educational prototype: translations, segmentation, and grammar may be incorrect. Not scholar-reviewed.")
 
+
 st.divider()
-st.caption("Sanskritam AI · Ancient Wisdom. Modern Intelligence. · sanskritam.ai · Hackathon v0.5")
+st.caption("Sanskritam AI · Ancient Wisdom. Modern Intelligence. · sanskritam.ai · Hackathon v0.6")
