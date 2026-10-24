@@ -1,4 +1,4 @@
-"""Sanskritam AI v1.0 — beginner-friendly Streamlit hackathon app."""
+"""Sanskritam AI v1.1 — beginner-friendly Streamlit hackathon app."""
 import json
 import html
 import os
@@ -52,7 +52,7 @@ div[data-testid="stButton"] button[kind="secondary"]:hover{border-color:#267344;
 .result-heading.blue{border-left-color:#215db4;border-top:0}
 .result-heading.purple{border-left-color:#7b3591;border-top:0}
 .result-intro{color:#46584e;margin-bottom:.65rem;font-size:.95rem}
-.hindi-result{font-family:'Noto Sans Devanagari',sans-serif;font-size:1.3rem;line-height:1.9;background:#fff8e9;border-color:#e5d1a4;color:#423115}
+.additional-result{font-family:'Noto Sans Devanagari',sans-serif;font-size:1.3rem;line-height:1.9;background:#fff8e9;border-color:#e5d1a4;color:#423115}
 .translation-result{background:#f0f8f2;border:1px solid #bed9c6;
   border-radius:14px;padding:1.25rem 1.35rem;font-size:1.2rem;line-height:1.7;
   color:#153e2c;margin:.6rem 0 1rem}
@@ -68,6 +68,20 @@ with header_name:
     st.markdown('<div class="brand">संस्कृतम् AI · Sanskritam AI<small>DISCOVER · TRANSLATE · UNDERSTAND</small></div>', unsafe_allow_html=True)
 st.markdown('<section class="hero"><div class="kicker">ANCIENT WISDOM · MODERN INTELLIGENCE</div><h1>Discover the Beauty of Sanskrit</h1><p>Translate across languages, explore each word, and learn the grammar behind the meaning.</p></section>', unsafe_allow_html=True)
 
+
+LANGUAGES = {
+    "Hindi": {"native": "हिन्दी", "code": "hi"},
+    "Tamil": {"native": "தமிழ்", "code": "ta"},
+    "Telugu": {"native": "తెలుగు", "code": "te"},
+    "Kannada": {"native": "ಕನ್ನಡ", "code": "kn"},
+    "Malayalam": {"native": "മലയാളം", "code": "ml"},
+    "Bengali": {"native": "বাংলা", "code": "bn"},
+    "Marathi": {"native": "मराठी", "code": "mr"},
+    "Gujarati": {"native": "ગુજરાતી", "code": "gu"},
+    "French": {"native": "Français", "code": "fr"},
+    "Spanish": {"native": "Español", "code": "es"},
+    "English": {"native": "English", "code": "en"},
+}
 
 EXAMPLES = {
     "Simple sentence": "रामः पुस्तकं पठति।",
@@ -86,9 +100,9 @@ def api_key():
         return None
 
 
-def translate(source: str, direction: str) -> dict:
+def translate(source: str, direction: str, target_language: str) -> dict:
     schema = {
-        "natural_translation": "string", "hindi_translation": "string", "literal_translation": "string",
+        "natural_translation": "string", "selected_language_translation": "string", "literal_translation": "string",
         "words": [{"word": "string", "meaning": "string", "grammar": "string", "note": "string", "lemma": "string", "case": "string", "number": "string", "gender": "string", "part_of_speech": "string"}],
         "grammar_explanation": "string", "sandhi_explanation": "string",
         "ambiguities": "string", "learning_tip": "string"
@@ -96,9 +110,10 @@ def translate(source: str, direction: str) -> dict:
     instructions = (
         "You are a careful Classical Sanskrit tutor. Respond with ONLY a valid JSON object, "
         "no Markdown fences. Follow the example shape supplied. "
-        "Always provide a natural Hindi translation in hindi_translation using fluent Devanagari Hindi. "
-        "For Sanskrit-to-English, translate the Sanskrit source directly into Hindi, not via English. "
-        "For English-to-Sanskrit, hindi_translation should translate the generated Sanskrit into Hindi. "
+        f"Always provide a fluent {target_language} translation in selected_language_translation. "
+        f"Write the selected translation in {target_language}'s normal writing system, not transliteration. "
+        "For Sanskrit-to-English, translate the Sanskrit source directly into the selected language, not via English. "
+        "For English-to-Sanskrit, selected_language_translation should translate the generated Sanskrit into the selected language. "
         "natural_translation is English when direction is Sanskrit-to-English and Sanskrit when direction is English-to-Sanskrit. "
         "For Sanskrit-to-English, words are Sanskrit tokens or clearly identified segments. "
         "For English-to-Sanskrit, words are the Sanskrit words you generate. "
@@ -110,7 +125,7 @@ def translate(source: str, direction: str) -> dict:
     )
     result = OpenAI(api_key=api_key()).responses.create(
         model="gpt-4.1-mini", instructions=instructions,
-        input=f"Direction: {direction}\nText: {source}\nJSON example shape: {json.dumps(schema, ensure_ascii=False)}",
+        input=f"Direction: {direction}\nSelected output language: {target_language}\nText: {source}\nJSON example shape: {json.dumps(schema, ensure_ascii=False)}",
         max_output_tokens=2400,
     )
     data = json.loads(result.output_text)
@@ -122,6 +137,12 @@ def translate(source: str, direction: str) -> dict:
 st.subheader("Translation workspace")
 with st.container(border=True):
     direction = st.radio("Translation direction", ["Sanskrit → English", "English → Sanskrit"], horizontal=True)
+    target_language = st.selectbox(
+        "Additional translation language",
+        list(LANGUAGES), index=0,
+        format_func=lambda name: f"{name} · {LANGUAGES[name]['native']}",
+        help="English is always shown for Sanskrit input. Choose another language to see its translation underneath."
+    )
     example = st.selectbox("Try an example", ["Your own text", *EXAMPLES]) if direction.startswith("Sanskrit") else "Your own text"
     starter = EXAMPLES.get(example, "") if direction.startswith("Sanskrit") else ""
     if st.session_state.get("last_example") != (direction, example):
@@ -141,7 +162,8 @@ if submitted:
     else:
         with st.spinner("Translating and analyzing…"):
             try:
-                st.session_state["result"] = translate(source.strip(), direction)
+                st.session_state["result"] = translate(source.strip(), direction, target_language)
+                st.session_state["last_target_language"] = target_language
                 st.session_state["last_source"] = source.strip()
                 st.session_state["last_direction"] = direction
                 st.session_state["selected_word"] = 0
@@ -158,14 +180,21 @@ else:
     st.caption("Results for: " + st.session_state.get("last_source", source)[:180])
     st.markdown('<div class="result-heading">✦ Translation</div>', unsafe_allow_html=True)
     st.markdown('<p class="result-intro">Start with the meaning, then explore how each word works.</p>', unsafe_allow_html=True)
-    st.markdown("**Natural translation**")
+    if st.session_state.get("last_target_language") != target_language:
+        st.info("Language selection changed. Click Translate & Analyze to update this result.")
+    st.markdown("**Natural translation (English)**" if st.session_state.get("last_direction", "").startswith("Sanskrit") else "**Natural translation (Sanskrit)**")
     st.markdown('<div class="translation-result">' + html.escape(str(data.get("natural_translation") or "Not available")) + '</div>', unsafe_allow_html=True)
-    st.markdown("**हिन्दी अनुवाद · Hindi translation**")
-    hindi = str(data.get("hindi_translation") or "").strip()
-    if hindi:
-        st.markdown('<div class="translation-result hindi-result" lang="hi">' + html.escape(hindi) + '</div>', unsafe_allow_html=True)
+    result_language = st.session_state.get("last_target_language", "Hindi")
+    lang_info = LANGUAGES.get(result_language, LANGUAGES["Hindi"])
+    st.markdown(f"**{lang_info['native']} · {result_language} translation**")
+    translated = str(data.get("selected_language_translation") or "").strip()
+    if translated:
+        st.markdown(
+            '<div class="translation-result additional-result" lang="' + lang_info['code'] + '">' +
+            html.escape(translated) + '</div>', unsafe_allow_html=True
+        )
     else:
-        st.info("Hindi translation is unavailable for this result. Translate again to generate it.")
+        st.info(f"{result_language} translation unavailable. Please try again.")
     st.markdown("**Literal translation**")
     st.write(str(data.get("literal_translation") or "Not available"))
     ambiguities = str(data.get("ambiguities") or "").strip()
@@ -257,4 +286,4 @@ if data:
 
 
 st.divider()
-st.caption("Sanskritam AI · Ancient Wisdom. Modern Intelligence. · sanskritam.ai · Hackathon v1.0")
+st.caption("Sanskritam AI · Ancient Wisdom. Modern Intelligence. · sanskritam.ai · Hackathon v1.1")
