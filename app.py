@@ -1,101 +1,173 @@
+"""Sanskritam AI v0.4 — beginner-friendly Streamlit hackathon app."""
+import json
 import os
-import re
+from pathlib import Path
+
 import streamlit as st
 from dotenv import load_dotenv
 from openai import OpenAI
 
 load_dotenv()
-st.set_page_config(page_title="Sanskritam AI | Discover · Translate · Understand", page_icon="🪷", layout="wide", initial_sidebar_state="collapsed")
+BASE = Path(__file__).parent
+st.set_page_config(page_title="Sanskritam AI | Translate & Learn", page_icon="🪷", layout="wide")
 
 st.markdown("""<style>
 @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Noto+Sans+Devanagari:wght@400;500;600;700&family=Playfair+Display:wght@500;600;700&display=swap');
-:root{color-scheme:light;--ink:#143b2b;--green:#195a35;--gold:#bd7510;--blue:#124a92;--purple:#6a267d;--cream:#fff9ed;--text:#24342f}
-.stApp{background:linear-gradient(180deg,#fdf4df 0%,#fffaf1 30%,#f6f9f4 100%);color:var(--text);font-family:'DM Sans',sans-serif}
-.block-container{max-width:1100px;padding-top:1.2rem;padding-bottom:3rem}
-header[data-testid='stHeader']{background:transparent}
-h1,h2,h3{font-family:'Playfair Display',Georgia,serif!important;color:var(--ink)!important}
-.brandbar{display:flex;align-items:center;justify-content:space-between;gap:1rem;padding:.8rem 0 1.1rem;border-bottom:1px solid #dfcda8}
-.brandname{font:700 1.45rem 'Playfair Display',Georgia,serif;color:#154a30}.brandname span{color:#ae690e}
-.brandtag{font-size:.82rem;color:#42584b;letter-spacing:.06em}
-.hero{position:relative;overflow:hidden;border-radius:24px;margin:1.25rem 0 1.5rem;padding:2.3rem 2rem;text-align:center;background:radial-gradient(circle at 9% 20%,#f2c47790,transparent 27%),radial-gradient(circle at 91% 80%,#8ec4e277,transparent 32%),linear-gradient(115deg,#fff4d8,#fffdf7 48%,#e9f4ee);border:1px solid #e7d4ad;box-shadow:0 12px 30px #4e552010}
-.hero:before,.hero:after{content:'✦';position:absolute;color:#c28b31;opacity:.3;font-size:4rem;top:10%;left:5%}.hero:after{top:auto;left:auto;right:5%;bottom:5%;color:#235e8d}
-.eyebrow{font-size:.8rem;font-weight:700;letter-spacing:.2em;color:#86520c;margin-bottom:.6rem}
-.hero h1{font-size:clamp(2rem,4.4vw,3.4rem);margin:.2rem 0 .6rem}
-.hero p{font-size:1.06rem;color:#354e45;margin:0 auto;max-width:620px;line-height:1.7}
-.pillars{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin:.6rem 0 1.6rem}
-.pillar{background:#fffdf9;border:1px solid #e8dfcc;border-radius:14px;padding:1rem .8rem;box-shadow:0 4px 12px #3145210a}
-.pillar strong{display:block;font-size:.96rem;margin:.15rem 0}.pillar small{color:#43564f;line-height:1.4;display:block}.pillar .icon{font-size:1.35rem}
-.gold{border-top:4px solid #c17a16;color:#955c0c}.green{border-top:4px solid #267042;color:#195a35}.blue{border-top:4px solid #185cb2;color:#164e94}.purple{border-top:4px solid #7e3093;color:#692780}
-.section-heading{font:700 1.45rem 'Playfair Display',Georgia,serif;color:#163e2d;margin:0 0 .4rem}
-.section-sub{color:#455e52;margin-bottom:1.1rem}
-[data-testid='stVerticalBlockBorderWrapper']{background:#fffefa;border:1px solid #e5d8bf!important;border-radius:18px!important;box-shadow:0 6px 22px #5846200c}
-.stButton>button[kind='primary']{background:#185a39!important;color:white!important;border:2px solid #185a39!important;border-radius:12px;min-height:52px;font-size:1rem;font-weight:700}
-.stButton>button[kind='primary']:hover{background:#103f2b!important;border-color:#103f2b!important}
-.stButton button:focus-visible,button:focus-visible,textarea:focus-visible,input:focus-visible{outline:3px solid #a5670a!important;outline-offset:3px!important}
-textarea{font-family:'Noto Sans Devanagari','DM Sans',sans-serif!important;font-size:1.2rem!important;line-height:1.85!important}
-[data-testid='stMarkdownContainer'] p,[data-testid='stMarkdownContainer'] li{line-height:1.7}
-[data-testid='stTabs'] button{font-weight:700!important}
-.footer{text-align:center;color:#3e554a;font-size:.86rem;padding:1rem}
-@media(max-width:720px){.block-container{padding:1rem .8rem 2rem}.brandbar{flex-direction:column;align-items:flex-start}.hero{padding:1.7rem .9rem}.pillars{grid-template-columns:repeat(2,minmax(0,1fr))}.hero:before,.hero:after{display:none}}
+:root{--green:#154832;--gold:#9b6014;--blue:#174e91;--purple:#6a267d;--ink:#25372f}
+.stApp{background:linear-gradient(165deg,#fff6e4,#fffdf8 42%,#f0f6f2);color:var(--ink);font-family:'DM Sans',sans-serif}
+.block-container{max-width:1180px;padding-top:1rem;padding-bottom:3rem}
+header[data-testid="stHeader"]{background:transparent}
+h1,h2,h3{font-family:'Playfair Display',Georgia,serif!important;color:var(--green)!important}
+.brand{padding:.7rem 0;border-bottom:1px solid #d8c8a6;color:var(--green);font:700 1.45rem 'Playfair Display',serif}
+.brand small{display:block;font:500 .83rem 'DM Sans',sans-serif;color:#526358;letter-spacing:.08em}
+.hero{margin:1.2rem 0;border:1px solid #e1c99f;border-radius:24px;padding:2.1rem 2rem;background:linear-gradient(100deg,#fff3d5d9,#fffef8eb 55%,#eaf4f2dc),url('data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 160"%3E%3Cpath d="M0 145Q180 10 310 90T600 25" fill="none" stroke="%23c89c50" stroke-width="3" opacity=".3"/%3E%3C/svg%3E');box-shadow:0 12px 28px #5b4b2414}
+.hero .kicker{font-weight:700;letter-spacing:.16em;font-size:.78rem;color:#88570f}
+.hero h1{font-size:clamp(2rem,4vw,3.3rem);margin:.35rem 0}.hero p{max-width:650px;font-size:1.08rem;line-height:1.65;color:#364c40}
+.features{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:1.5rem}
+.feature{padding:1rem;border:1px solid #e7dac1;border-radius:14px;background:#fffefa;min-height:104px}
+.feature strong{display:block;margin-bottom:.35rem}.feature small{color:#46584e}
+.gold{border-top:5px solid #bd7c20}.green{border-top:5px solid #267344}.blue{border-top:5px solid #215db4}.purple{border-top:5px solid #7b3591}
+[data-testid="stVerticalBlockBorderWrapper"]{background:#fffefb;border:1px solid #e6d9c2!important;border-radius:18px!important}
+.stButton>button[kind="primary"]{background:#175b3d!important;color:white!important;border-radius:12px!important;min-height:50px;font-weight:700;border:2px solid #175b3d!important}
+.stButton>button[kind="primary"]:hover{background:#0f422d!important}
+button:focus-visible,textarea:focus-visible,input:focus-visible{outline:3px solid #a6670c!important;outline-offset:3px!important}
+textarea{font:1.22rem/1.8 'Noto Sans Devanagari','DM Sans',sans-serif!important}
+.wordcard{padding:1rem;border:1px solid #d8e3d9;border-left:5px solid #247248;background:#f8fcf8;border-radius:12px;margin:.3rem 0 .7rem;min-height:145px}
+.wordcard .dev{font:700 1.5rem 'Noto Sans Devanagari',sans-serif;color:#164d32}
+.wordcard .meaning{font-weight:700;color:#263b31;margin:.4rem 0}.wordcard .meta{font-size:.88rem;color:#43594e}
+.stTabs [role="tab"]{font-weight:700}.note{color:#44584c;font-size:.9rem}
+@media(max-width:750px){.block-container{padding:1rem .8rem}.features{grid-template-columns:repeat(2,1fr)}.hero{padding:1.5rem 1rem}}
 @media(prefers-reduced-motion:reduce){*,*:before,*:after{animation:none!important;transition:none!important}}
-</style>""",unsafe_allow_html=True)
+</style>""", unsafe_allow_html=True)
 
-st.markdown('<div class="brandbar"><div class="brandname">🪷 संस्कृतम् <span>AI</span> · Sanskritam AI</div><div class="brandtag">DISCOVER · EXPLORE · UNDERSTAND</div></div>',unsafe_allow_html=True)
-st.markdown('<section class="hero"><div class="eyebrow">ANCIENT WISDOM · MODERN INTELLIGENCE</div><h1>Discover the Beauty of Sanskrit</h1><p>Bridge timeless knowledge and modern discovery. Translate Sanskrit, explore every word, and understand the meaning behind the language.</p></section>',unsafe_allow_html=True)
-st.markdown('''<div class="pillars"><div class="pillar gold"><div class="icon">✦</div><strong>Translation</strong><small>Clear, natural meaning</small></div><div class="pillar green"><div class="icon">🌿</div><strong>Word Analysis</strong><small>Learn word by word</small></div><div class="pillar blue"><div class="icon">▦</div><strong>Grammar</strong><small>Explore language structure</small></div><div class="pillar purple"><div class="icon">ॐ</div><strong>Sandhi</strong><small>Uncover word connections</small></div></div>''',unsafe_allow_html=True)
+logo = (BASE / "assets" / "lotus.svg").read_text(encoding="utf-8")
+header_logo, header_name = st.columns([1, 11], vertical_alignment="center")
+with header_logo:
+    st.image(str(BASE / "assets" / "lotus.svg"), width=70)
+with header_name:
+    st.markdown('<div class="brand">संस्कृतम् AI · Sanskritam AI<small>DISCOVER · TRANSLATE · UNDERSTAND</small></div>', unsafe_allow_html=True)
+st.markdown('<section class="hero"><div class="kicker">ANCIENT WISDOM · MODERN INTELLIGENCE</div><h1>Discover the Beauty of Sanskrit</h1><p>Translate across languages, explore each word, and learn the grammar behind the meaning.</p></section>', unsafe_allow_html=True)
+st.markdown('<div class="features"><div class="feature gold"><strong>✦ Translation</strong><small>Natural and literal meaning</small></div><div class="feature green"><strong>🌿 Word Explorer</strong><small>Understand each word</small></div><div class="feature blue"><strong>▦ Grammar</strong><small>Learn the structure</small></div><div class="feature purple"><strong>ॐ Sandhi</strong><small>Explore word connections</small></div></div>', unsafe_allow_html=True)
 
-st.markdown('<div class="section-heading">Your translation workspace</div><div class="section-sub">Start with an example or paste your own text below.</div>',unsafe_allow_html=True)
-with st.container(border=True):
-    direction=st.radio('Translation direction',['Sanskrit → English','English → Sanskrit'],horizontal=True)
-    examples={'Bhagavad Gītā excerpt':'कर्मण्येवाधिकारस्ते मा फलेषु कदाचन','Simple sentence':'रामः पुस्तकं पठति।','Greeting':'नमस्ते।'}
-    if direction=='Sanskrit → English':
-        chosen=st.selectbox('Explore an example',['Choose your own',*examples.keys()])
-        initial=examples.get(chosen,'')
-    else:
-        initial='The student reads a book.'
-    source=st.text_area('Text to translate',value=initial,height=150,placeholder='Type or paste text here…',max_chars=2000)
-    translate=st.button('✦ Translate & Analyze',type='primary',use_container_width=True)
+EXAMPLES = {
+    "Simple sentence": "रामः पुस्तकं पठति।",
+    "Gītā excerpt": "कर्मण्येवाधिकारस्ते मा फलेषु कदाचन",
+    "Greeting": "नमस्ते।",
+}
 
-if translate:
-    if not source.strip():
-        st.warning('Please enter some text to translate.')
-    else:
-        key=os.getenv('OPENAI_API_KEY')
-        if not key:
-            try: key=st.secrets.get('OPENAI_API_KEY')
-            except Exception: key=None
-        if not key:
-            st.error('API key missing. Set OPENAI_API_KEY in your local .env file or in Streamlit Cloud secrets.')
+
+def api_key():
+    key = os.getenv("OPENAI_API_KEY")
+    if key:
+        return key
+    try:
+        return st.secrets.get("OPENAI_API_KEY")
+    except (FileNotFoundError, KeyError):
+        return None
+
+
+def translate(source: str, direction: str) -> dict:
+    schema = {
+        "natural_translation": "string", "literal_translation": "string",
+        "words": [{"word": "string", "meaning": "string", "grammar": "string", "note": "string"}],
+        "grammar_explanation": "string", "sandhi_explanation": "string",
+        "ambiguities": "string", "learning_tip": "string"
+    }
+    instructions = (
+        "You are a careful Classical Sanskrit tutor. Respond with ONLY a valid JSON object, "
+        "no Markdown fences. Follow the example shape supplied. "
+        "For Sanskrit-to-English, words are Sanskrit tokens or clearly identified segments. "
+        "For English-to-Sanskrit, words are the Sanskrit words you generate. "
+        "Do not fabricate sources. Clearly state uncertainty for ambiguous sandhi, "
+        "compounds, morphology, or translations. Do not claim expert verification. "
+        "Keep each word's note and grammar concise; give up to 12 words. "
+        "If input is a fragment, identify it as a fragment."
+    )
+    result = OpenAI(api_key=api_key()).responses.create(
+        model="gpt-4.1-mini", instructions=instructions,
+        input=f"Direction: {direction}\nText: {source}\nJSON example shape: {json.dumps(schema, ensure_ascii=False)}",
+        max_output_tokens=2400,
+    )
+    data = json.loads(result.output_text)
+    if not isinstance(data, dict) or not isinstance(data.get("words"), list):
+        raise ValueError("Unexpected response format")
+    return data
+
+
+st.subheader("Translation workspace")
+left, right = st.columns([1, 1], gap="large")
+with left:
+    with st.container(border=True):
+        direction = st.radio("Translation direction", ["Sanskrit → English", "English → Sanskrit"], horizontal=True)
+        example = st.selectbox("Try an example", ["Your own text", *EXAMPLES]) if direction.startswith("Sanskrit") else "Your own text"
+        starter = EXAMPLES.get(example, "") if direction.startswith("Sanskrit") else ""
+        if st.session_state.get("last_example") != (direction, example):
+            st.session_state["source_text"] = starter
+            st.session_state["last_example"] = (direction, example)
+        source = st.text_area("Enter text", key="source_text", height=185, max_chars=1600,
+                              placeholder="Type or paste Sanskrit here…" if direction.startswith("Sanskrit") else "Type English here…")
+        learn = st.toggle("Beginner learning mode", value=True, help="Show word cards and an extra learning tip.")
+        submitted = st.button("✦ Translate & Analyze", type="primary", use_container_width=True)
+        st.caption("AI-generated explanations may contain mistakes. Verify important interpretations.")
+
+with right:
+    with st.container(border=True):
+        st.markdown("### Translation result")
+        if submitted:
+            if not source.strip():
+                st.warning("Enter text before translating.")
+            elif not api_key():
+                st.error("API key not found. Add OPENAI_API_KEY to your local .env or Streamlit Cloud secrets.")
+            else:
+                with st.spinner("Translating and analyzing…"):
+                    try:
+                        st.session_state["result"] = translate(source.strip(), direction)
+                        st.session_state["last_source"] = source.strip()
+                    except (ValueError, json.JSONDecodeError):
+                        st.error("The AI response was incomplete. Please try again.")
+                    except Exception as exc:
+                        st.error("Could not translate. Check your API key, billing, and internet connection.")
+                        st.caption(f"Error category: {type(exc).__name__}")
+        data = st.session_state.get("result")
+        if data:
+            st.markdown("**Natural translation**")
+            st.success(str(data.get("natural_translation", "Not available")))
+            st.markdown("**Literal translation**")
+            st.write(str(data.get("literal_translation", "Not available")))
+            st.download_button("↓ Download analysis (JSON)", data=json.dumps(data, ensure_ascii=False, indent=2),
+                               file_name="sanskritam-analysis.json", mime="application/json")
         else:
-            with st.spinner('Exploring the language and meaning…'):
-                try:
-                    result=OpenAI(api_key=key).responses.create(
-                        model='gpt-4.1-mini',
-                        instructions='You are a careful Classical Sanskrit assistant. Respond with exactly these Markdown level-2 headings in order: Natural Translation, Literal Translation, Word-by-word Analysis, Grammar, Sandhi and Compounds, Ambiguities. Word-by-word Analysis should contain a Markdown table. Identify uncertainty honestly; never fabricate sources or claim that analysis is verified. For English to Sanskrit, explain generated Sanskrit forms.',
-                        input=f'Direction: {direction}\nText:\n{source}',max_output_tokens=1800)
-                    st.session_state['translation_result']=result.output_text
-                    st.session_state['translation_source']=source
-                    st.session_state['translation_direction']=direction
-                except Exception as exc:
-                    st.error('Translation could not be completed. Check your API billing, model access, and network connection.')
-                    st.caption(f'Error type: {type(exc).__name__}')
+            st.info("Your translation will appear here after you select Translate & Analyze.")
 
-if st.session_state.get('translation_result'):
-    st.markdown('### Translation & language insights')
-    raw=st.session_state['translation_result']
-    parts=re.split(r'(?m)^##\s+(.+?)\s*$',raw)
-    sections={parts[i].strip().lower():parts[i+1].strip() for i in range(1,len(parts)-1,2)}
-    titles=[('Natural Translation','Translation'),('Literal Translation','Literal'),('Word-by-word Analysis','Words'),('Grammar','Grammar'),('Sandhi and Compounds','Sandhi'),('Ambiguities','Alternatives')]
-    if sections:
-        tabs=st.tabs([label for _,label in titles])
-        for tab,(heading,label) in zip(tabs,titles):
-            with tab:
-                content=sections.get(heading.lower())
-                if content: st.markdown(content)
-                else: st.info('No separate analysis was provided for this section.')
-    else:
-        st.markdown(raw)
-    st.download_button('↓ Download full analysis',data=raw,file_name='sanskritam-analysis.md',mime='text/markdown')
-    st.info('AI-generated Sanskrit translations and grammatical analyses may contain errors. Consult a qualified scholar for important interpretations.')
+if data:
+    st.subheader("Explore the meaning")
+    words_tab, grammar_tab, sandhi_tab, alternatives_tab = st.tabs(["🌿 Words", "▦ Grammar", "ॐ Sandhi", "✦ Alternatives"])
+    with words_tab:
+        words = data.get("words", [])
+        if learn:
+            st.caption("Word cards help you study one form at a time. AI analyses require verification.")
+            for offset in range(0, min(len(words), 12), 3):
+                cols = st.columns(3)
+                for col, item in zip(cols, words[offset:offset+3]):
+                    with col:
+                        with st.container(border=True):
+                            st.markdown(f"**{item.get('word', '')}**")
+                            st.write(item.get("meaning", ""))
+                            st.caption(item.get("grammar", ""))
+                            if item.get("note"):
+                                st.caption(item["note"])
+            st.info("Learning tip: " + str(data.get("learning_tip", "Review each form in context.")))
+        else:
+            st.dataframe([{"Word": x.get("word", ""), "Meaning": x.get("meaning", ""),
+                           "Grammar": x.get("grammar", "")} for x in words],
+                         use_container_width=True, hide_index=True)
+    with grammar_tab:
+        st.write(str(data.get("grammar_explanation", "No explanation provided.")))
+    with sandhi_tab:
+        st.write(str(data.get("sandhi_explanation", "No sandhi analysis provided.")))
+    with alternatives_tab:
+        st.write(str(data.get("ambiguities", "No alternatives identified.")))
+    st.warning("Educational prototype: translations, segmentation, and grammar may be incorrect. Not scholar-reviewed.")
 
-st.markdown('<div class="footer">Sanskritam AI · Ancient Wisdom. Modern Intelligence. · sanskritam.ai<br>Hackathon MVP v0.3</div>',unsafe_allow_html=True)
+st.divider()
+st.caption("Sanskritam AI · Ancient Wisdom. Modern Intelligence. · sanskritam.ai · Hackathon v0.4")
