@@ -6,6 +6,8 @@ from pathlib import Path
 import streamlit as st
 from dotenv import load_dotenv
 from openai import OpenAI
+from reference import lookup, compare_words
+from feedback import save_feedback
 
 load_dotenv()
 BASE = Path(__file__).parent
@@ -69,7 +71,7 @@ def api_key():
 def translate(source: str, direction: str) -> dict:
     schema = {
         "natural_translation": "string", "literal_translation": "string",
-        "words": [{"word": "string", "meaning": "string", "grammar": "string", "note": "string"}],
+        "words": [{"word": "string", "meaning": "string", "grammar": "string", "note": "string", "lemma": "string", "case": "string", "number": "string", "gender": "string", "part_of_speech": "string"}],
         "grammar_explanation": "string", "sandhi_explanation": "string",
         "ambiguities": "string", "learning_tip": "string"
     }
@@ -80,6 +82,7 @@ def translate(source: str, direction: str) -> dict:
         "For English-to-Sanskrit, words are the Sanskrit words you generate. "
         "Do not fabricate sources. Clearly state uncertainty for ambiguous sandhi, "
         "compounds, morphology, or translations. Do not claim expert verification. "
+        "For each word include lemma (dictionary form or verb root), case, number, gender, and part_of_speech; use not applicable where appropriate. "
         "Keep each word's note and grammar concise; give up to 12 words. "
         "If input is a fragment, identify it as a fragment."
     )
@@ -123,6 +126,7 @@ with right:
                     try:
                         st.session_state["result"] = translate(source.strip(), direction)
                         st.session_state["last_source"] = source.strip()
+                        st.session_state["last_direction"] = direction
                     except (ValueError, json.JSONDecodeError):
                         st.error("The AI response was incomplete. Please try again.")
                     except Exception as exc:
@@ -167,7 +171,52 @@ if data:
         st.write(str(data.get("sandhi_explanation", "No sandhi analysis provided.")))
     with alternatives_tab:
         st.write(str(data.get("ambiguities", "No alternatives identified.")))
+    st.markdown("### 🔎 Guided word explorer")
+    available = [w for w in data.get("words", []) if isinstance(w, dict) and w.get("word")]
+    if available:
+        choices = list(range(len(available)))
+        selection = st.selectbox("Choose a Sanskrit word to explore", choices,
+                                 format_func=lambda i: f"{i + 1}. {available[i]['word']}")
+        item = available[selection]
+        details = {
+            "Word": item.get("word", "—"), "Meaning": item.get("meaning", "—"),
+            "Root / lemma (AI)": item.get("lemma", "—"), "Part of speech (AI)": item.get("part_of_speech", "—"),
+            "Case (AI)": item.get("case", "—"), "Number (AI)": item.get("number", "—"),
+            "Gender (AI)": item.get("gender", "—"), "Grammar note (AI)": item.get("grammar", "—")
+        }
+        for label, value in details.items():
+            st.markdown(f"**{label}:** {value}")
+        reference = lookup(str(item.get("word", "")))
+        if reference:
+            st.success("Reference entry available: exact word form matched in the small curated demo lexicon.")
+            st.json(reference)
+        else:
+            st.info("No curated reference for this exact form. The analysis above is AI-generated and unverified.")
+
+    with st.expander("📖 Reference cross-check (limited demo coverage)"):
+        matches = compare_words(data.get("words", []))
+        st.write(f"Exact forms found in curated demo lexicon: {len(matches)} / {len(available)}")
+        if matches:
+            for match in matches:
+                st.markdown(f"**{match['word']}** — {match['reference']['meaning']} · {match['reference']['note']}")
+        st.caption("A dictionary lookup is not a full morphological validation. This prototype does not yet integrate a general Sanskrit morphological parser. Sandhi and ambiguous forms still require expert review.")
+
+    with st.expander("📝 Report an issue with this translation"):
+        with st.form("translation_feedback", clear_on_submit=True):
+            rating = st.radio("Was this result helpful?", ["Yes", "Partly", "No"], horizontal=True)
+            category = st.selectbox("Issue type", ["Translation", "Word meaning", "Grammar", "Sandhi", "Other"])
+            comment = st.text_area("What should be corrected? (optional)", max_chars=1000)
+            sent = st.form_submit_button("Submit feedback")
+            if sent:
+                try:
+                    save_feedback(st.session_state.get("last_source", ""),
+                                  st.session_state.get("last_direction", ""), rating, category, comment)
+                    st.success("Feedback saved locally. Thank you!")
+                except Exception:
+                    st.error("Could not save feedback. Check write permissions on the server.")
+        st.caption("Feedback and source text are saved in a local SQLite file. On free ephemeral hosting, feedback may be lost after restarts. Do not enter private information.")
+
     st.warning("Educational prototype: translations, segmentation, and grammar may be incorrect. Not scholar-reviewed.")
 
 st.divider()
-st.caption("Sanskritam AI · Ancient Wisdom. Modern Intelligence. · sanskritam.ai · Hackathon v0.4")
+st.caption("Sanskritam AI · Ancient Wisdom. Modern Intelligence. · sanskritam.ai · Hackathon v0.5")
