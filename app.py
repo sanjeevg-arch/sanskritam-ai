@@ -1,5 +1,6 @@
-"""Sanskritam AI v0.7 — beginner-friendly Streamlit hackathon app."""
+"""Sanskritam AI v0.8 — beginner-friendly Streamlit hackathon app."""
 import json
+import html
 import os
 from pathlib import Path
 
@@ -37,52 +38,19 @@ textarea{font:1.22rem/1.8 'Noto Sans Devanagari','DM Sans',sans-serif!important}
 .wordcard{padding:1rem;border:1px solid #d8e3d9;border-left:5px solid #247248;background:#f8fcf8;border-radius:12px;margin:.3rem 0 .7rem;min-height:145px}
 .wordcard .dev{font:700 1.5rem 'Noto Sans Devanagari',sans-serif;color:#164d32}
 .wordcard .meaning{font-weight:700;color:#263b31;margin:.4rem 0}.wordcard .meta{font-size:.88rem;color:#43594e}
-/* Prominent, accessible four-card result navigation */
+/* Clean, scannable results displayed together — no tab navigation */
 .note{color:#44584c;font-size:.9rem}
-[data-testid="stTabs"] [role="tablist"]{
-  display:grid!important;grid-template-columns:repeat(4,minmax(0,1fr));
-  gap:12px!important;align-items:stretch;border:0!important;
-  padding:6px 2px 12px;overflow:visible!important;
-}
-[data-testid="stTabs"] button[role="tab"]{
-  display:flex!important;flex-direction:column!important;align-items:flex-start!important;
-  justify-content:center!important;text-align:left!important;
-  width:100%!important;min-width:0!important;min-height:114px!important;
-  white-space:normal!important;padding:18px 17px!important;
-  background:#fffdfa!important;border:1px solid #e7d8bd!important;
-  border-top:6px solid #bf7c1c!important;border-radius:16px!important;
-  color:#172f28!important;box-shadow:0 4px 12px #183a2810!important;
-  font:700 1.05rem/1.4 'DM Sans',sans-serif!important;
-  transition:transform .15s ease,box-shadow .15s ease,background .15s ease;
-}
-[data-testid="stTabs"] button[role="tab"]:nth-child(2){border-top-color:#267344!important}
-[data-testid="stTabs"] button[role="tab"]:nth-child(3){border-top-color:#215db4!important}
-[data-testid="stTabs"] button[role="tab"]:nth-child(4){border-top-color:#7b3591!important}
-[data-testid="stTabs"] button[role="tab"]::after{
-  display:block;font:400 .85rem/1.4 'DM Sans',sans-serif;
-  color:#44564b;margin-top:8px;white-space:normal;
-}
-[data-testid="stTabs"] button[role="tab"]:nth-child(1)::after{content:"Natural and literal meaning"}
-[data-testid="stTabs"] button[role="tab"]:nth-child(2)::after{content:"Understand each word"}
-[data-testid="stTabs"] button[role="tab"]:nth-child(3)::after{content:"Learn the structure"}
-[data-testid="stTabs"] button[role="tab"]:nth-child(4)::after{content:"Explore word connections"}
-[data-testid="stTabs"] button[role="tab"]:hover{
-  transform:translateY(-2px);box-shadow:0 8px 20px #183a2825!important;
-}
-[data-testid="stTabs"] button[role="tab"][aria-selected="true"]{
-  background:#f5f9f3!important;box-shadow:0 0 0 2px #175b3d,0 8px 22px #183a2823!important;
-}
-[data-testid="stTabs"] button[role="tab"]:focus-visible{
-  outline:3px solid #154e99!important;outline-offset:4px!important;
-}
-[data-testid="stTabs"] [role="tabpanel"]{padding-top:1.4rem}
-@media(max-width:850px){
-  [data-testid="stTabs"] [role="tablist"]{grid-template-columns:repeat(2,minmax(0,1fr))!important}
-}
-@media(max-width:450px){
-  [data-testid="stTabs"] button[role="tab"]{min-height:100px!important;padding:12px!important;font-size:.92rem!important}
-  [data-testid="stTabs"] button[role="tab"]::after{font-size:.75rem!important}
-}
+.result-heading{margin:1.35rem 0 .55rem;padding:.75rem 1rem;border-radius:12px;
+  background:#fffefa;border-left:6px solid #bd7c20;font-weight:700;
+  color:#163f2e;font-size:1.2rem}
+.result-heading.green{border-left-color:#267344;border-top:0}
+.result-heading.blue{border-left-color:#215db4;border-top:0}
+.result-heading.purple{border-left-color:#7b3591;border-top:0}
+.result-intro{color:#46584e;margin-bottom:.65rem;font-size:.95rem}
+.translation-result{background:#f0f8f2;border:1px solid #bed9c6;
+  border-radius:14px;padding:1.25rem 1.35rem;font-size:1.2rem;line-height:1.7;
+  color:#153e2c;margin:.6rem 0 1rem}
+@media(max-width:650px){.hero{padding:1.25rem}.block-container{padding-left:1rem;padding-right:1rem}}
 @media(prefers-reduced-motion:reduce){*,*:before,*:after{animation:none!important;transition:none!important}}
 </style>""", unsafe_allow_html=True)
 
@@ -172,84 +140,71 @@ if submitted:
                 st.error("Could not translate. Check your API key, billing, and internet connection.")
                 st.caption(f"Error category: {type(exc).__name__}")
 data = st.session_state.get("result")
-st.subheader("Explore your results")
-translation_tab, words_tab, grammar_tab, sandhi_tab = st.tabs([
-    "✦ Translation", "🌿 Word Explorer", "▦ Grammar", "🔗 Sandhi"
-])
-with translation_tab:
-    if data:
-        st.markdown("### Natural translation")
-        st.success(str(data.get("natural_translation", "Not available")))
-        st.markdown("### Literal translation")
-        st.write(str(data.get("literal_translation", "Not available")))
-        st.markdown("### Alternative interpretations")
-        st.write(str(data.get("ambiguities", "No alternatives identified.")))
-        st.download_button("↓ Download analysis (JSON)", data=json.dumps(data, ensure_ascii=False, indent=2),
-                           file_name="sanskritam-analysis.json", mime="application/json")
-    else:
-        st.info("Enter a passage above and choose Translate & Analyze to see your results.")
-with words_tab:
-    if data:
-        words = data.get("words", [])
+st.subheader("Your translation & analysis")
+if not data:
+    st.info("Enter a passage above and select Translate & Analyze. Your translation and explanations will appear together below.")
+else:
+    st.caption("Results for: " + st.session_state.get("last_source", source)[:180])
+    st.markdown('<div class="result-heading">✦ Translation</div>', unsafe_allow_html=True)
+    st.markdown('<p class="result-intro">Start with the meaning, then explore how each word works.</p>', unsafe_allow_html=True)
+    st.markdown("**Natural translation**")
+    st.markdown('<div class="translation-result">' + html.escape(str(data.get("natural_translation") or "Not available")) + '</div>', unsafe_allow_html=True)
+    st.markdown("**Literal translation**")
+    st.write(str(data.get("literal_translation") or "Not available"))
+    ambiguities = str(data.get("ambiguities") or "").strip()
+    if ambiguities and ambiguities.lower() not in ("none", "n/a", "not applicable"):
+        with st.expander("Other possible interpretations"):
+            st.write(ambiguities)
+
+    st.markdown('<div class="result-heading green">🌿 Word Explorer</div>', unsafe_allow_html=True)
+    st.markdown('<p class="result-intro">See each word’s meaning and select one for a closer look.</p>', unsafe_allow_html=True)
+    available = [w for w in data.get("words", []) if isinstance(w, dict) and w.get("word")]
+    if available:
+        for offset in range(0, min(len(available), 12), 3):
+            cols = st.columns(min(3, len(available[offset:offset+3])))
+            for col, item in zip(cols, available[offset:offset+3]):
+                with col:
+                    with st.container(border=True):
+                        st.markdown(f"**{item.get('word', '')}**")
+                        st.write(item.get("meaning", ""))
+                        st.caption(item.get("grammar", ""))
         if learn:
-            st.caption("Word cards help you study one form at a time. AI analyses require verification.")
-            for offset in range(0, min(len(words), 12), 3):
-                cols = st.columns(3)
-                for col, item in zip(cols, words[offset:offset+3]):
-                    with col:
-                        with st.container(border=True):
-                            st.markdown(f"**{item.get('word', '')}**")
-                            st.write(item.get("meaning", ""))
-                            st.caption(item.get("grammar", ""))
-                            if item.get("note"):
-                                st.caption(item["note"])
-            st.info("Learning tip: " + str(data.get("learning_tip", "Review each form in context.")))
-        else:
-            st.dataframe([{"Word": x.get("word", ""), "Meaning": x.get("meaning", ""),
-                           "Grammar": x.get("grammar", "")} for x in words],
-                         use_container_width=True, hide_index=True)
-        st.markdown("### 🔎 Guided word explorer")
-        available = [w for w in data.get("words", []) if isinstance(w, dict) and w.get("word")]
-        if available:
-            choices = list(range(len(available)))
-            selection = st.selectbox("Choose a Sanskrit word to explore", choices,
-                                     format_func=lambda i: f"{i + 1}. {available[i]['word']}")
-            item = available[selection]
-            details = {
-                "Word": item.get("word", "—"), "Meaning": item.get("meaning", "—"),
-                "Root / lemma (AI)": item.get("lemma", "—"), "Part of speech (AI)": item.get("part_of_speech", "—"),
-                "Case (AI)": item.get("case", "—"), "Number (AI)": item.get("number", "—"),
-                "Gender (AI)": item.get("gender", "—"), "Grammar note (AI)": item.get("grammar", "—")
-            }
-            for label, value in details.items():
-                st.markdown(f"**{label}:** {value}")
+            st.info("Learning tip: " + str(data.get("learning_tip") or "Review each form in context."))
+        with st.expander("🔎 Explore a word in detail"):
+            choice = st.selectbox("Choose a word", range(len(available)),
+                                  format_func=lambda i: f"{i + 1}. {available[i]['word']}")
+            item = available[choice]
+            for label, key in [("Meaning", "meaning"), ("Root / lemma (AI)", "lemma"),
+                               ("Part of speech (AI)", "part_of_speech"), ("Case (AI)", "case"),
+                               ("Number (AI)", "number"), ("Gender (AI)", "gender"),
+                               ("Grammar note (AI)", "grammar")]:
+                st.markdown(f"**{label}:** {item.get(key) or '—'}")
             reference = lookup(str(item.get("word", "")))
             if reference:
-                st.success("Reference entry available: exact word form matched in the small curated demo lexicon.")
+                st.success("Exact-form match in the small curated demo lexicon (not full grammatical verification).")
                 st.json(reference)
             else:
-                st.info("No curated reference for this exact form. The analysis above is AI-generated and unverified.")
+                st.caption("No exact reference match. The analysis is AI-generated and unverified.")
+        with st.expander("📖 Reference cross-check (limited coverage)"):
+            matches = compare_words(available)
+            st.write(f"Exact forms found: {len(matches)} / {len(available)}")
+            for match in matches:
+                st.markdown(f"**{match['word']}** — {match['reference']['meaning']} · {match['reference']['note']}")
+            st.caption("Dictionary matching is not a general Sanskrit morphological parser.")
+    else:
+        st.info("No word-by-word analysis was returned.")
 
-        with st.expander("📖 Reference cross-check (limited demo coverage)"):
-            matches = compare_words(data.get("words", []))
-            st.write(f"Exact forms found in curated demo lexicon: {len(matches)} / {len(available)}")
-            if matches:
-                for match in matches:
-                    st.markdown(f"**{match['word']}** — {match['reference']['meaning']} · {match['reference']['note']}")
-            st.caption("A dictionary lookup is not a full morphological validation. This prototype does not yet integrate a general Sanskrit morphological parser. Sandhi and ambiguous forms still require expert review.")
+    st.markdown('<div class="result-heading blue">▦ Grammar</div>', unsafe_allow_html=True)
+    st.markdown('<p class="result-intro">Understand the sentence structure and grammatical forms.</p>', unsafe_allow_html=True)
+    st.write(str(data.get("grammar_explanation") or "No grammar explanation available."))
 
-    else:
-        st.info("Translate a passage to explore this section.")
-with grammar_tab:
-    if data:
-        st.write(str(data.get("grammar_explanation", "No explanation provided.")))
-    else:
-        st.info("Translate a passage to explore this section.")
-with sandhi_tab:
-    if data:
-        st.write(str(data.get("sandhi_explanation", "No sandhi analysis provided.")))
-    else:
-        st.info("Translate a passage to explore this section.")
+    st.markdown('<div class="result-heading purple">🔗 Sandhi & Compounds</div>', unsafe_allow_html=True)
+    st.markdown('<p class="result-intro">Explore how sounds and words join together.</p>', unsafe_allow_html=True)
+    st.write(str(data.get("sandhi_explanation") or "No sandhi analysis available."))
+
+    st.download_button("↓ Download complete analysis (JSON)",
+                       data=json.dumps(data, ensure_ascii=False, indent=2),
+                       file_name="sanskritam-analysis.json", mime="application/json")
 
 if data:
     with st.expander("📝 Report an issue with this translation"):
@@ -271,4 +226,4 @@ if data:
 
 
 st.divider()
-st.caption("Sanskritam AI · Ancient Wisdom. Modern Intelligence. · sanskritam.ai · Hackathon v0.6")
+st.caption("Sanskritam AI · Ancient Wisdom. Modern Intelligence. · sanskritam.ai · Hackathon v0.8")
