@@ -1,4 +1,4 @@
-"""Sanskritam AI v0.8 — beginner-friendly Streamlit hackathon app."""
+"""Sanskritam AI v0.9 — beginner-friendly Streamlit hackathon app."""
 import json
 import html
 import os
@@ -38,6 +38,11 @@ textarea{font:1.22rem/1.8 'Noto Sans Devanagari','DM Sans',sans-serif!important}
 .wordcard{padding:1rem;border:1px solid #d8e3d9;border-left:5px solid #247248;background:#f8fcf8;border-radius:12px;margin:.3rem 0 .7rem;min-height:145px}
 .wordcard .dev{font:700 1.5rem 'Noto Sans Devanagari',sans-serif;color:#164d32}
 .wordcard .meaning{font-weight:700;color:#263b31;margin:.4rem 0}.wordcard .meta{font-size:.88rem;color:#43594e}
+/* Interactive word selector: prominent touch-friendly buttons */
+div[data-testid="stButton"] button[kind="secondary"]{min-height:72px;border:1px solid #bad5c3;border-radius:14px;background:#f6fbf7;color:#174b32;white-space:normal;font-weight:700;line-height:1.5}
+div[data-testid="stButton"] button[kind="secondary"]:hover{border-color:#267344;background:#eaf5ed}
+.word-detail{border:2px solid #267344;border-radius:18px;background:#f3faf4;padding:1.1rem 1.3rem;margin:.7rem 0}
+.word-detail-title{font:700 1.65rem 'Noto Sans Devanagari',sans-serif;color:#174b32}
 /* Clean, scannable results displayed together — no tab navigation */
 .note{color:#44584c;font-size:.9rem}
 .result-heading{margin:1.35rem 0 .55rem;padding:.75rem 1rem;border-radius:12px;
@@ -134,6 +139,7 @@ if submitted:
                 st.session_state["result"] = translate(source.strip(), direction)
                 st.session_state["last_source"] = source.strip()
                 st.session_state["last_direction"] = direction
+                st.session_state["selected_word"] = 0
             except (ValueError, json.JSONDecodeError):
                 st.error("The AI response was incomplete. Please try again.")
             except Exception as exc:
@@ -160,31 +166,45 @@ else:
     st.markdown('<p class="result-intro">See each word’s meaning and select one for a closer look.</p>', unsafe_allow_html=True)
     available = [w for w in data.get("words", []) if isinstance(w, dict) and w.get("word")]
     if available:
-        for offset in range(0, min(len(available), 12), 3):
-            cols = st.columns(min(3, len(available[offset:offset+3])))
-            for col, item in zip(cols, available[offset:offset+3]):
+        st.caption("Select any word below to see its grammatical details. The selected word is highlighted in the panel beneath.")
+        if st.session_state.get("selected_word", 0) >= len(available):
+            st.session_state["selected_word"] = 0
+        for offset in range(0, len(available), 4):
+            cols = st.columns(min(4, len(available[offset:offset + 4])))
+            for index, col in enumerate(cols, start=offset):
+                item = available[index]
+                selected = index == st.session_state.get("selected_word", 0)
+                label = f"{'● ' if selected else ''}{item['word']}\n{item.get('meaning', '')}"
                 with col:
-                    with st.container(border=True):
-                        st.markdown(f"**{item.get('word', '')}**")
-                        st.write(item.get("meaning", ""))
-                        st.caption(item.get("grammar", ""))
+                    if st.button(label, key=f"word_{index}", use_container_width=True,
+                                 help=f"Explore grammar for {item['word']}"):
+                        st.session_state["selected_word"] = index
+                        st.rerun()
+        item = available[st.session_state.get("selected_word", 0)]
+        st.markdown('<div class="word-detail"><div class="word-detail-title">' +
+                    html.escape(str(item.get("word", ""))) +
+                    '</div><strong>' + html.escape(str(item.get("meaning", ""))) +
+                    '</strong><br><small>Selected word · AI-generated analysis</small></div>',
+                    unsafe_allow_html=True)
+        left, right = st.columns(2)
+        fields = [("Root / lemma", "lemma"), ("Part of speech", "part_of_speech"),
+                  ("Case", "case"), ("Number", "number"), ("Gender", "gender"),
+                  ("Grammar", "grammar")]
+        for idx, (label, key) in enumerate(fields):
+            with (left if idx % 2 == 0 else right):
+                st.markdown(f"**{label}**")
+                st.write(str(item.get(key) or "Not specified"))
+        if item.get("note"):
+            st.info("In context: " + str(item["note"]))
+        reference = lookup(str(item.get("word", "")))
+        if reference:
+            with st.expander("View curated reference entry (exact-form match)"):
+                st.json(reference)
+                st.caption("A reference match is not independent verification of the full analysis.")
+        else:
+            st.caption("No exact match in the small reference lexicon; grammar is AI-generated and unverified.")
         if learn:
             st.info("Learning tip: " + str(data.get("learning_tip") or "Review each form in context."))
-        with st.expander("🔎 Explore a word in detail"):
-            choice = st.selectbox("Choose a word", range(len(available)),
-                                  format_func=lambda i: f"{i + 1}. {available[i]['word']}")
-            item = available[choice]
-            for label, key in [("Meaning", "meaning"), ("Root / lemma (AI)", "lemma"),
-                               ("Part of speech (AI)", "part_of_speech"), ("Case (AI)", "case"),
-                               ("Number (AI)", "number"), ("Gender (AI)", "gender"),
-                               ("Grammar note (AI)", "grammar")]:
-                st.markdown(f"**{label}:** {item.get(key) or '—'}")
-            reference = lookup(str(item.get("word", "")))
-            if reference:
-                st.success("Exact-form match in the small curated demo lexicon (not full grammatical verification).")
-                st.json(reference)
-            else:
-                st.caption("No exact reference match. The analysis is AI-generated and unverified.")
         with st.expander("📖 Reference cross-check (limited coverage)"):
             matches = compare_words(available)
             st.write(f"Exact forms found: {len(matches)} / {len(available)}")
@@ -226,4 +246,4 @@ if data:
 
 
 st.divider()
-st.caption("Sanskritam AI · Ancient Wisdom. Modern Intelligence. · sanskritam.ai · Hackathon v0.8")
+st.caption("Sanskritam AI · Ancient Wisdom. Modern Intelligence. · sanskritam.ai · Hackathon v0.9")
