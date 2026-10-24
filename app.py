@@ -1,4 +1,4 @@
-"""Sanskritam AI v1.1 — beginner-friendly Streamlit hackathon app."""
+"""Sanskritam AI v1.2 — multilingual comparison Streamlit app."""
 import json
 import html
 import os
@@ -43,6 +43,7 @@ div[data-testid="stButton"] button[kind="secondary"]{min-height:72px;border:1px 
 div[data-testid="stButton"] button[kind="secondary"]:hover{border-color:#267344;background:#eaf5ed}
 .word-detail{border:2px solid #267344;border-radius:18px;background:#f3faf4;padding:1.1rem 1.3rem;margin:.7rem 0}
 .word-detail-title{font:700 1.65rem 'Noto Sans Devanagari',sans-serif;color:#174b32}
+.comparison-text{font-family:'DM Sans','Noto Sans Devanagari',sans-serif;font-size:1.18rem;line-height:1.9;min-height:75px;overflow-wrap:anywhere;color:#164832}
 /* Clean, scannable results displayed together — no tab navigation */
 .note{color:#44584c;font-size:.9rem}
 .result-heading{margin:1.35rem 0 .55rem;padding:.75rem 1rem;border-radius:12px;
@@ -100,9 +101,9 @@ def api_key():
         return None
 
 
-def translate(source: str, direction: str, target_language: str) -> dict:
+def translate(source: str, direction: str, target_languages: list[str]) -> dict:
     schema = {
-        "natural_translation": "string", "selected_language_translation": "string", "literal_translation": "string",
+        "natural_translation": "string", "translations": {lang: "string" for lang in target_languages}, "literal_translation": "string",
         "words": [{"word": "string", "meaning": "string", "grammar": "string", "note": "string", "lemma": "string", "case": "string", "number": "string", "gender": "string", "part_of_speech": "string"}],
         "grammar_explanation": "string", "sandhi_explanation": "string",
         "ambiguities": "string", "learning_tip": "string"
@@ -110,10 +111,10 @@ def translate(source: str, direction: str, target_language: str) -> dict:
     instructions = (
         "You are a careful Classical Sanskrit tutor. Respond with ONLY a valid JSON object, "
         "no Markdown fences. Follow the example shape supplied. "
-        f"Always provide a fluent {target_language} translation in selected_language_translation. "
-        f"Write the selected translation in {target_language}'s normal writing system, not transliteration. "
-        "For Sanskrit-to-English, translate the Sanskrit source directly into the selected language, not via English. "
-        "For English-to-Sanskrit, selected_language_translation should translate the generated Sanskrit into the selected language. "
+        "Return a translations JSON object with exactly the requested language names as keys. "
+        "Each translation must be fluent and in its language’s native script. "
+        "Translate directly from the original Sanskrit wherever possible, not through English. "
+        "For English-to-Sanskrit, translate the generated Sanskrit into each requested language. "
         "natural_translation is English when direction is Sanskrit-to-English and Sanskrit when direction is English-to-Sanskrit. "
         "For Sanskrit-to-English, words are Sanskrit tokens or clearly identified segments. "
         "For English-to-Sanskrit, words are the Sanskrit words you generate. "
@@ -125,24 +126,29 @@ def translate(source: str, direction: str, target_language: str) -> dict:
     )
     result = OpenAI(api_key=api_key()).responses.create(
         model="gpt-4.1-mini", instructions=instructions,
-        input=f"Direction: {direction}\nSelected output language: {target_language}\nText: {source}\nJSON example shape: {json.dumps(schema, ensure_ascii=False)}",
+        input=f"Direction: {direction}\nComparison languages: {json.dumps(target_languages)}\nText: {source}\nJSON example shape: {json.dumps(schema, ensure_ascii=False)}",
         max_output_tokens=2400,
     )
     data = json.loads(result.output_text)
     if not isinstance(data, dict) or not isinstance(data.get("words"), list):
         raise ValueError("Unexpected response format")
+    if not isinstance(data.get("translations"), dict):
+        raise ValueError("Missing comparison translations")
     return data
 
 
 st.subheader("Translation workspace")
 with st.container(border=True):
     direction = st.radio("Translation direction", ["Sanskrit → English", "English → Sanskrit"], horizontal=True)
-    target_language = st.selectbox(
-        "Additional translation language",
-        list(LANGUAGES), index=0,
+    target_languages = st.multiselect(
+        "Compare Languages — choose up to 3",
+        [name for name in LANGUAGES if name != "English"],
+        default=["Hindi"],
         format_func=lambda name: f"{name} · {LANGUAGES[name]['native']}",
-        help="English is always shown for Sanskrit input. Choose another language to see its translation underneath."
+        max_selections=3,
+        help="English is shown automatically for Sanskrit input. Select up to three additional languages."
     )
+    st.caption(f"{len(target_languages)} of 3 comparison languages selected")
     example = st.selectbox("Try an example", ["Your own text", *EXAMPLES]) if direction.startswith("Sanskrit") else "Your own text"
     starter = EXAMPLES.get(example, "") if direction.startswith("Sanskrit") else ""
     if st.session_state.get("last_example") != (direction, example):
@@ -162,8 +168,8 @@ if submitted:
     else:
         with st.spinner("Translating and analyzing…"):
             try:
-                st.session_state["result"] = translate(source.strip(), direction, target_language)
-                st.session_state["last_target_language"] = target_language
+                st.session_state["result"] = translate(source.strip(), direction, target_languages)
+                st.session_state["last_target_languages"] = target_languages.copy()
                 st.session_state["last_source"] = source.strip()
                 st.session_state["last_direction"] = direction
                 st.session_state["selected_word"] = 0
@@ -180,21 +186,35 @@ else:
     st.caption("Results for: " + st.session_state.get("last_source", source)[:180])
     st.markdown('<div class="result-heading">✦ Translation</div>', unsafe_allow_html=True)
     st.markdown('<p class="result-intro">Start with the meaning, then explore how each word works.</p>', unsafe_allow_html=True)
-    if st.session_state.get("last_target_language") != target_language:
-        st.info("Language selection changed. Click Translate & Analyze to update this result.")
+    if st.session_state.get("last_target_languages", []) != target_languages:
+        st.info("Language selection changed. Click Translate & Analyze to refresh the comparison.")
     st.markdown("**Natural translation (English)**" if st.session_state.get("last_direction", "").startswith("Sanskrit") else "**Natural translation (Sanskrit)**")
     st.markdown('<div class="translation-result">' + html.escape(str(data.get("natural_translation") or "Not available")) + '</div>', unsafe_allow_html=True)
-    result_language = st.session_state.get("last_target_language", "Hindi")
-    lang_info = LANGUAGES.get(result_language, LANGUAGES["Hindi"])
-    st.markdown(f"**{lang_info['native']} · {result_language} translation**")
-    translated = str(data.get("selected_language_translation") or "").strip()
-    if translated:
-        st.markdown(
-            '<div class="translation-result additional-result" lang="' + lang_info['code'] + '">' +
-            html.escape(translated) + '</div>', unsafe_allow_html=True
-        )
+    selected = st.session_state.get("last_target_languages", [])
+    if selected:
+        st.markdown("### 🌐 Compare Languages")
+        st.caption("Compare how the same passage is expressed across languages.")
+        translations = data.get("translations") or {}
+        cards = (["English"] if st.session_state.get("last_direction", "").startswith("Sanskrit") else ["Sanskrit"]) + selected
+        # Use Streamlit columns for responsive comparison; on narrow screens Streamlit stacks columns.
+        for start_index in range(0, len(cards), 2):
+            row = cards[start_index:start_index + 2]
+            cols = st.columns(len(row), gap="medium")
+            for col, language in zip(cols, row):
+                with col:
+                    if language == "English" or language == "Sanskrit":
+                        value = str(data.get("natural_translation") or "Not available")
+                        code = "en" if language == "English" else "sa"
+                        native = language
+                    else:
+                        value = str(translations.get(language) or "Translation unavailable")
+                        code = LANGUAGES[language]["code"]
+                        native = LANGUAGES[language]["native"]
+                    with st.container(border=True):
+                        st.markdown(f"**{html.escape(native)} · {language}**")
+                        st.markdown('<div class="comparison-text" lang="' + code + '">' + html.escape(value) + '</div>', unsafe_allow_html=True)
     else:
-        st.info(f"{result_language} translation unavailable. Please try again.")
+        st.caption("Select comparison languages above and translate to see them side by side.")
     st.markdown("**Literal translation**")
     st.write(str(data.get("literal_translation") or "Not available"))
     ambiguities = str(data.get("ambiguities") or "").strip()
@@ -286,4 +306,4 @@ if data:
 
 
 st.divider()
-st.caption("Sanskritam AI · Ancient Wisdom. Modern Intelligence. · sanskritam.ai · Hackathon v1.1")
+st.caption("Sanskritam AI · Ancient Wisdom. Modern Intelligence. · sanskritam.ai · Hackathon v1.2")
