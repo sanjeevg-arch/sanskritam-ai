@@ -15,7 +15,7 @@ h1,h2,h3 {font-family:'Playfair Display',serif!important;color:#164A4A!important
 .hero {text-align:center;padding:1.4rem 0 2rem;}
 .hero h1 {font-size:clamp(2.2rem,5vw,3.5rem);margin-bottom:.5rem;}
 .hero p {font-size:1.12rem;color:#52636B;}
-.brand {color:#164A4A;font-size:1.25rem;font-weight:700;letter-spacing:.03em;}
+.brand {color:#164A4A;font-size:1.5rem;font-weight:700;letter-spacing:.03em;}
 .eyebrow {color:#176B65;font-weight:700;letter-spacing:.14em;font-size:.75rem;}
 .stButton>button[kind='primary'] {background:#176B65;color:white;border:2px solid #176B65;border-radius:10px;min-height:48px;font-weight:700;}
 .stButton>button[kind='primary']:hover {background:#164A4A;border-color:#164A4A;color:white;}
