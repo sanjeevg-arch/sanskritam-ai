@@ -1,4 +1,4 @@
-"""Sanskritam AI v0.6 — beginner-friendly Streamlit hackathon app."""
+"""Sanskritam AI v0.7 — beginner-friendly Streamlit hackathon app."""
 import json
 import os
 from pathlib import Path
@@ -37,15 +37,52 @@ textarea{font:1.22rem/1.8 'Noto Sans Devanagari','DM Sans',sans-serif!important}
 .wordcard{padding:1rem;border:1px solid #d8e3d9;border-left:5px solid #247248;background:#f8fcf8;border-radius:12px;margin:.3rem 0 .7rem;min-height:145px}
 .wordcard .dev{font:700 1.5rem 'Noto Sans Devanagari',sans-serif;color:#164d32}
 .wordcard .meaning{font-weight:700;color:#263b31;margin:.4rem 0}.wordcard .meta{font-size:.88rem;color:#43594e}
-.stTabs [role="tab"]{font-weight:700}.note{color:#44584c;font-size:.9rem}
-[data-testid="stTabs"] [role="tablist"]{gap:.6rem;flex-wrap:wrap;border-bottom:0}
-[data-testid="stTabs"] button[role="tab"]{background:#fffefa;border:1px solid #e7dac1;border-top:5px solid #bd7c20;border-radius:13px;padding:.85rem 1.1rem;min-height:65px;color:#25372f!important;font-size:1rem}
-[data-testid="stTabs"] button[role="tab"]:nth-child(2){border-top-color:#267344}
-[data-testid="stTabs"] button[role="tab"]:nth-child(3){border-top-color:#215db4}
-[data-testid="stTabs"] button[role="tab"]:nth-child(4){border-top-color:#7b3591}
-[data-testid="stTabs"] button[role="tab"][aria-selected="true"]{background:#eaf4ee;border-bottom:3px solid #175b3d;box-shadow:0 3px 12px #123a241c}
+/* Prominent, accessible four-card result navigation */
+.note{color:#44584c;font-size:.9rem}
+[data-testid="stTabs"] [role="tablist"]{
+  display:grid!important;grid-template-columns:repeat(4,minmax(0,1fr));
+  gap:12px!important;align-items:stretch;border:0!important;
+  padding:6px 2px 12px;overflow:visible!important;
+}
+[data-testid="stTabs"] button[role="tab"]{
+  display:flex!important;flex-direction:column!important;align-items:flex-start!important;
+  justify-content:center!important;text-align:left!important;
+  width:100%!important;min-width:0!important;min-height:114px!important;
+  white-space:normal!important;padding:18px 17px!important;
+  background:#fffdfa!important;border:1px solid #e7d8bd!important;
+  border-top:6px solid #bf7c1c!important;border-radius:16px!important;
+  color:#172f28!important;box-shadow:0 4px 12px #183a2810!important;
+  font:700 1.05rem/1.4 'DM Sans',sans-serif!important;
+  transition:transform .15s ease,box-shadow .15s ease,background .15s ease;
+}
+[data-testid="stTabs"] button[role="tab"]:nth-child(2){border-top-color:#267344!important}
+[data-testid="stTabs"] button[role="tab"]:nth-child(3){border-top-color:#215db4!important}
+[data-testid="stTabs"] button[role="tab"]:nth-child(4){border-top-color:#7b3591!important}
+[data-testid="stTabs"] button[role="tab"]::after{
+  display:block;font:400 .85rem/1.4 'DM Sans',sans-serif;
+  color:#44564b;margin-top:8px;white-space:normal;
+}
+[data-testid="stTabs"] button[role="tab"]:nth-child(1)::after{content:"Natural and literal meaning"}
+[data-testid="stTabs"] button[role="tab"]:nth-child(2)::after{content:"Understand each word"}
+[data-testid="stTabs"] button[role="tab"]:nth-child(3)::after{content:"Learn the structure"}
+[data-testid="stTabs"] button[role="tab"]:nth-child(4)::after{content:"Explore word connections"}
+[data-testid="stTabs"] button[role="tab"]:hover{
+  transform:translateY(-2px);box-shadow:0 8px 20px #183a2825!important;
+}
+[data-testid="stTabs"] button[role="tab"][aria-selected="true"]{
+  background:#f5f9f3!important;box-shadow:0 0 0 2px #175b3d,0 8px 22px #183a2823!important;
+}
+[data-testid="stTabs"] button[role="tab"]:focus-visible{
+  outline:3px solid #154e99!important;outline-offset:4px!important;
+}
 [data-testid="stTabs"] [role="tabpanel"]{padding-top:1.4rem}
-@media(max-width:750px){.block-container{padding:1rem .8rem}.features{grid-template-columns:repeat(2,1fr)}.hero{padding:1.5rem 1rem}}
+@media(max-width:850px){
+  [data-testid="stTabs"] [role="tablist"]{grid-template-columns:repeat(2,minmax(0,1fr))!important}
+}
+@media(max-width:450px){
+  [data-testid="stTabs"] button[role="tab"]{min-height:100px!important;padding:12px!important;font-size:.92rem!important}
+  [data-testid="stTabs"] button[role="tab"]::after{font-size:.75rem!important}
+}
 @media(prefers-reduced-motion:reduce){*,*:before,*:after{animation:none!important;transition:none!important}}
 </style>""", unsafe_allow_html=True)
 
