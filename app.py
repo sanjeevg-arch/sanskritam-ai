@@ -108,4 +108,4 @@ the Sanskrit forms you generated.
                 st.code(str(error))
 
 st.divider()
-st.caption("sanskritam.ai | Hackathon MVP v0.1")
+st.caption("sanskritam.ai | Hackathon MVP v0.0.1")
