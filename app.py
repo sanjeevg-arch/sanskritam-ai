@@ -10,6 +10,7 @@ import re
 import streamlit.components.v1 as components
 from pathlib import Path
 from learning_mode import render_learning_mode
+from learning_dashboard import render_dashboard
 from history import save_translation, render_history
 from study_notes import make_study_notes_pdf
 
@@ -238,6 +239,8 @@ with profile_area:
                     del st.session_state[key]
             st.rerun()
 
+
+render_dashboard(beta_user)
 
 st.markdown("### ♿ Accessibility & Learning Settings")
 with st.expander("Customize reading and listening", expanded=False):
