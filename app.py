@@ -1,7 +1,8 @@
-"""Sanskritam AI v1.2 — multilingual comparison Streamlit app."""
+"""Sanskritam AI v1.3 — multilingual comparison with speech playback."""
 import json
 import html
 import os
+import streamlit.components.v1 as components
 from pathlib import Path
 
 import streamlit as st
@@ -215,6 +216,63 @@ else:
                         st.markdown('<div class="comparison-text" lang="' + code + '">' + html.escape(value) + '</div>', unsafe_allow_html=True)
     else:
         st.caption("Select comparison languages above and translate to see them side by side.")
+    # Browser-native speech synthesis: no audio API key, no extra dependencies.
+    # A single component owns playback controls, so Stop can cancel any active speech.
+    speech_items = []
+    if st.session_state.get("last_direction", "").startswith("Sanskrit"):
+        speech_items.append({"name": "Sanskrit original", "text": st.session_state.get("last_source", ""), "lang": "sa-IN"})
+        speech_items.append({"name": "English translation", "text": str(data.get("natural_translation") or ""), "lang": "en-US"})
+    else:
+        speech_items.append({"name": "English original", "text": st.session_state.get("last_source", ""), "lang": "en-US"})
+        speech_items.append({"name": "Sanskrit translation", "text": str(data.get("natural_translation") or ""), "lang": "sa-IN"})
+    speech_codes = {"Hindi": "hi-IN", "Tamil": "ta-IN", "Telugu": "te-IN", "Kannada": "kn-IN", "Malayalam": "ml-IN", "Bengali": "bn-IN", "Marathi": "mr-IN", "Gujarati": "gu-IN", "French": "fr-FR", "Spanish": "es-ES", "English": "en-US"}
+    for language in selected:
+        translated = str((data.get("translations") or {}).get(language) or "").strip()
+        if translated:
+            speech_items.append({"name": language + " translation", "text": translated, "lang": speech_codes[language]})
+    st.markdown("### 🔊 Listen to Translation")
+    st.caption("Listen to the original and each available translation. Playback uses your browser's installed voices; Sanskrit and some regional-language voices may not be available on every device.")
+    # JSON encoding prevents translation content from being interpreted as HTML or JS.
+    speech_json = json.dumps(speech_items, ensure_ascii=False).replace("<", "\\u003c")
+    speech_html = """<!doctype html><html><head><meta charset="utf-8"><style>
+    body{font:15px system-ui,sans-serif;color:#214333;margin:0;padding:4px;background:transparent}
+    .controls{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+    select,button{border:1px solid #b5cdbb;border-radius:10px;padding:10px;background:#fff;max-width:100%;font:inherit}
+    button{background:#175b3d;color:#fff;cursor:pointer;font-weight:650}
+    button.stop{background:#fff;color:#175b3d}
+    button:disabled{opacity:.5;cursor:not-allowed}
+    #status{margin:9px 0;color:#486052;font-size:13px}
+    </style></head><body><div class="controls"><label for="speech-choice">Read aloud:</label>
+    <select id="speech-choice"></select><button id="play">▶ Listen</button><button class="stop" id="stop">■ Stop</button></div>
+    <div id="status" role="status" aria-live="polite">Choose a language and press Listen.</div>
+    <script>
+    const items=__ITEMS__;
+    const select=document.getElementById('speech-choice');
+    const status=document.getElementById('status');
+    const synth=window.speechSynthesis;
+    for(const [i,item] of items.entries()) {const o=document.createElement('option');o.value=i;o.textContent=item.name;select.appendChild(o);}
+    if(!synth){document.getElementById('play').disabled=true;status.textContent='Speech playback is not supported in this browser.';}
+    document.getElementById('play').onclick=()=>{
+      if(!synth)return;
+      synth.cancel();
+      const item=items[Number(select.value)];
+      if(!item||!item.text.trim()){status.textContent='No text available to read.';return;}
+      const utterance=new SpeechSynthesisUtterance(item.text);
+      utterance.lang=item.lang;utterance.rate=0.88;
+      const voices=synth.getVoices();
+      const exact=voices.find(v=>v.lang.toLowerCase()===item.lang.toLowerCase());
+      const similar=voices.find(v=>v.lang.toLowerCase().split('-')[0]===item.lang.toLowerCase().split('-')[0]);
+      if(exact||similar)utterance.voice=exact||similar;
+      else status.textContent='No matching '+item.name+' voice found; your browser may use a fallback voice.';
+      utterance.onstart=()=>{if(exact||similar)status.textContent='Playing '+item.name+'…';};
+      utterance.onend=()=>{status.textContent='Playback finished.';};
+      utterance.onerror=(e)=>{if(e.error!=='canceled')status.textContent='Unable to play audio: '+e.error;};
+      synth.speak(utterance);
+    };
+    document.getElementById('stop').onclick=()=>{if(synth)synth.cancel();status.textContent='Playback stopped.';};
+    window.addEventListener('pagehide',()=>{if(synth)synth.cancel();});
+    </script></body></html>""".replace("__ITEMS__", speech_json)
+    components.html(speech_html, height=112, scrolling=False)
     st.markdown("**Literal translation**")
     st.write(str(data.get("literal_translation") or "Not available"))
     ambiguities = str(data.get("ambiguities") or "").strip()
