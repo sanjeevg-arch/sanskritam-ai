@@ -63,8 +63,9 @@ def make_study_notes_pdf(source: str, direction: str, languages: list[str], data
                          include_sandhi: bool = True) -> bytes:
     if not isinstance(data, dict) or not source or not source.strip():
         raise ValueError('A completed translation is required.')
-    if not features.check('raqm'):
-        raise RuntimeError('Pillow was built without RAQM text shaping support.')
+    # RAQM is optional: do not crash on Streamlit Cloud wheels without it.
+    # BASIC mode is a compatibility fallback; complex Indic shaping may be imperfect.
+    has_raqm = bool(features.check('raqm'))
 
     # A4 at approximately 125 dpi. Multi-page, with generous margins.
     W, H = 1034, 1462
@@ -80,7 +81,7 @@ def make_study_notes_pdf(source: str, direction: str, languages: list[str], data
         key = (script, size)
         if key not in fonts:
             fonts[key] = ImageFont.truetype(_font_path(script), size,
-                                           layout_engine=ImageFont.Layout.RAQM)
+                                           layout_engine=(ImageFont.Layout.RAQM if has_raqm else ImageFont.Layout.BASIC))
         return fonts[key]
 
     def draw_line(line, size, color, line_height):
@@ -156,6 +157,8 @@ def make_study_notes_pdf(source: str, direction: str, languages: list[str], data
         section('Grammar explained', data.get('grammar_explanation'))
     if include_sandhi:
         section('Sandhi & compounds', data.get('sandhi_explanation'))
+    if not has_raqm:
+        section('Font rendering notice', 'This server lacks advanced Indic text shaping. Some Sanskrit or regional-language conjuncts and vowel signs may appear incorrectly. For accurate typography, enable Pillow RAQM support.')
     section('Study reminder', 'AI-generated translations and grammatical explanations may contain errors. Verify important passages against authoritative sources.')
     pages.append(page)
 
