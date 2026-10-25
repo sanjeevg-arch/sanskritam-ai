@@ -1,5 +1,7 @@
 """Sanskritam AI v1.7 — Private Beta, Learning, and Image Transcription."""
 import json
+import io
+import wave
 import base64
 import hashlib
 import html
@@ -182,6 +184,39 @@ def extract_sanskrit_from_image(image_bytes: bytes, mime_type: str) -> tuple[str
     return extracted, tokens
 
 
+# Voice input uses OpenAI transcription; each explicit transcription is quota-metered.
+# Recording a clip alone never calls the API. Audio stays editable before translation.
+MAX_AUDIO_BYTES = 4 * 1024 * 1024
+MAX_AUDIO_SECONDS = 60
+
+
+def transcribe_sanskrit_audio(audio_bytes: bytes) -> tuple[str, int]:
+    if not audio_bytes or len(audio_bytes) > MAX_AUDIO_BYTES:
+        raise ValueError("Record a clip smaller than 4 MB (up to 60 seconds).")
+    try:
+        with wave.open(io.BytesIO(audio_bytes), "rb") as recording:
+            duration = recording.getnframes() / recording.getframerate()
+    except (wave.Error, EOFError, ZeroDivisionError) as exc:
+        raise ValueError("The recording is not a valid WAV audio clip.") from exc
+    if duration <= 0 or duration > MAX_AUDIO_SECONDS:
+        raise ValueError("Record between 1 and 60 seconds of speech.")
+    audio_file = io.BytesIO(audio_bytes)
+    audio_file.name = "sanskrit_recording.wav"
+    response = OpenAI(api_key=api_key()).audio.transcriptions.create(
+        model="gpt-4o-transcribe",
+        file=audio_file,
+        prompt=("The speaker is reading Sanskrit. Transcribe the spoken words "
+                "faithfully using Devanagari script. Do not translate, explain, or invent text."),
+    )
+    transcript = str(getattr(response, "text", "") or "").strip()
+    if not transcript:
+        raise ValueError("No speech was recognized. Try speaking closer to the microphone.")
+    # Transcription API may not return token usage; the request still consumes quota.
+    usage = getattr(response, "usage", None)
+    tokens = int(getattr(usage, "total_tokens", 0) or 0)
+    return transcript, tokens
+
+
 # Accessibility controls apply to the results without triggering a new API request.
 beta_user = auth_gate()
 
@@ -288,6 +323,52 @@ with st.expander("Upload an image of Sanskrit text", expanded=False):
                     st.warning("Only the first 1,000 characters can be transferred to the translation box.")
                 st.caption("The extracted text will appear in the translation input below. You can edit it there.")
 
+st.subheader("🎙️ Voice Input · Speak Sanskrit")
+with st.expander("Record Sanskrit speech", expanded=False):
+    st.write("Record up to 60 seconds of Sanskrit speech. Review and edit the transcription before translating.")
+    st.caption("Microphone access requires browser permission and HTTPS (or localhost). "
+               "Recording is free; clicking Transcribe uses 1 AI request and counts against your daily quota. "
+               "Audio is sent to OpenAI. Avoid recording private conversations.")
+    voice_clip = st.audio_input("Record Sanskrit", sample_rate=16000, key="sanskrit_voice_recording")
+    if voice_clip is not None:
+        voice_bytes = voice_clip.getvalue()
+        if len(voice_bytes) > MAX_AUDIO_BYTES:
+            st.warning("Audio exceeds 4 MB. Please record a shorter clip.")
+        else:
+            st.caption("Recording ready. Click Transcribe to send it for recognition.")
+            if st.button("🎙️ Transcribe Sanskrit (uses 1 AI request)", key="transcribe_voice"):
+                if not api_key():
+                    st.error("OPENAI_API_KEY is missing.")
+                else:
+                    request_id = new_request_id()
+                    try:
+                        allowance = reserve(beta_user, request_id)
+                    except BetaError as exc:
+                        st.error(str(exc))
+                    else:
+                        with st.spinner("Transcribing Sanskrit speech…"):
+                            try:
+                                transcript, tokens = transcribe_sanskrit_audio(voice_bytes)
+                                finish(request_id, True, tokens)
+                                st.session_state["voice_transcript"] = transcript
+                                st.session_state["voice_pending_text"] = transcript[:1000]
+                                st.success("Transcription ready. Review it in the translation box below.")
+                                st.caption(f"Requests remaining today: {allowance['remaining_today']}")
+                            except ValueError as exc:
+                                try: finish(request_id, False)
+                                except BetaError: pass
+                                st.warning(str(exc))
+                            except Exception as exc:
+                                try: finish(request_id, False)
+                                except BetaError: pass
+                                st.error("Speech transcription failed. Check your API billing and try again.")
+                                st.caption(f"Error category: {type(exc).__name__}")
+    if st.session_state.get("voice_transcript"):
+        st.text_area("Recognized Sanskrit (preview)", st.session_state["voice_transcript"],
+                     height=100, disabled=True)
+        if len(st.session_state["voice_transcript"]) > 1000:
+            st.warning("Only the first 1,000 characters are transferred to the translation box.")
+
 # Apply a saved entry BEFORE Streamlit widgets are instantiated. No AI call or quota use.
 if 'history_pending_open' in st.session_state:
     entry = st.session_state.pop('history_pending_open')
@@ -298,6 +379,7 @@ if 'history_pending_open' in st.session_state:
     st.session_state['selected_word'] = 0
     st.session_state['lesson_attempts'] = {}
     st.session_state['lesson_finished'] = False
+    st.session_state.pop("voice_pending_text", None)
     st.session_state['source_text'] = entry['source_text']
     st.session_state['history_restore_direction'] = entry['direction']
     st.session_state['history_restore_languages'] = entry.get('languages') or []
@@ -318,6 +400,9 @@ with st.container(border=True):
     st.caption(f"{len(target_languages)} of 3 comparison languages selected")
     example = st.selectbox("Try an example", ["Your own text", *EXAMPLES]) if direction.startswith("Sanskrit") else "Your own text"
     starter = EXAMPLES.get(example, "") if direction.startswith("Sanskrit") else ""
+    if "voice_pending_text" in st.session_state:
+        st.session_state["source_text"] = st.session_state.pop("voice_pending_text")
+        st.session_state["last_example"] = (direction, example)
     if "ocr_pending_text" in st.session_state:
         st.session_state["source_text"] = st.session_state.pop("ocr_pending_text")
         st.session_state["last_example"] = (direction, example)
