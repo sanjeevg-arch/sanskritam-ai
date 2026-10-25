@@ -1,4 +1,4 @@
-"""Sanskritam AI v1.3 — multilingual comparison with speech playback."""
+"""Sanskritam AI v1.4 — Accessibility & Learning Edition."""
 import json
 import html
 import os
@@ -10,6 +10,7 @@ from dotenv import load_dotenv
 from openai import OpenAI
 from reference import lookup, compare_words
 from feedback import save_feedback
+from indic_transliteration import sanscript
 
 load_dotenv()
 BASE = Path(__file__).parent
@@ -138,6 +139,37 @@ def translate(source: str, direction: str, target_languages: list[str]) -> dict:
     return data
 
 
+# Accessibility controls apply to the results without triggering a new API request.
+st.markdown("### ♿ Accessibility & Learning Settings")
+with st.expander("Customize reading and listening", expanded=False):
+    size_choice = st.select_slider("Text size", options=["Small", "Medium", "Large", "Extra large"], value="Medium")
+    high_contrast = st.checkbox("High contrast", value=False)
+    show_iast = st.checkbox("Show Sanskrit transliteration (IAST)", value=True)
+    simple_reading = st.checkbox("Simplified reading mode", value=False,
+                                help="Reduce decorative elements and increase reading space.")
+    audio_speed = st.select_slider("Audio speed", options=["Slow (0.75×)", "Normal (1×)", "Fast (1.25×)"], value="Normal (1×)")
+
+size_px = {"Small": 17, "Medium": 20, "Large": 25, "Extra large": 30}[size_choice]
+rate = {"Slow (0.75×)": 0.75, "Normal (1×)": 1.0, "Fast (1.25×)": 1.25}[audio_speed]
+# Controlled values only: no user text is inserted into CSS.
+st.markdown(f"""<style>
+.translation-result,.comparison-text,.word-detail,.stMarkdown p{{font-size:{size_px}px!important;line-height:1.85!important}}
+textarea{{font-size:{size_px}px!important}}
+.stButton button:focus-visible,[data-baseweb] *:focus-visible,select:focus-visible{{outline:3px solid #a6670c!important;outline-offset:3px!important}}
+{'.stApp{background:#fff!important;color:#111!important} .translation-result,.word-detail,.comparison-text{background:#fff!important;color:#111!important;border:2px solid #111!important} .result-heading{color:#111!important;border-color:#111!important;background:#fff!important} .stMarkdown p,.stMarkdown span{color:#111!important}' if high_contrast else ''}
+{'.hero,.features{display:none!important} .block-container{max-width:1000px!important}' if simple_reading else ''}
+</style>""", unsafe_allow_html=True)
+
+
+def iast(text: str) -> str:
+    """Deterministic Devanagari to IAST transliteration; not phonetic audio."""
+    return sanscript.transliterate(text, sanscript.DEVANAGARI, sanscript.IAST)
+
+
+def show_transliteration(text: str):
+    if show_iast and text and re.search(r"[\u0900-\u097f]", text):
+        st.caption("IAST transliteration: " + iast(text))
+
 st.subheader("Translation workspace")
 with st.container(border=True):
     direction = st.radio("Translation direction", ["Sanskrit → English", "English → Sanskrit"], horizontal=True)
@@ -185,12 +217,15 @@ if not data:
     st.info("Enter a passage above and select Translate & Analyze. Your translation and explanations will appear together below.")
 else:
     st.caption("Results for: " + st.session_state.get("last_source", source)[:180])
+    show_transliteration(st.session_state.get("last_source", ""))
     st.markdown('<div class="result-heading">✦ Translation</div>', unsafe_allow_html=True)
     st.markdown('<p class="result-intro">Start with the meaning, then explore how each word works.</p>', unsafe_allow_html=True)
     if st.session_state.get("last_target_languages", []) != target_languages:
         st.info("Language selection changed. Click Translate & Analyze to refresh the comparison.")
     st.markdown("**Natural translation (English)**" if st.session_state.get("last_direction", "").startswith("Sanskrit") else "**Natural translation (Sanskrit)**")
     st.markdown('<div class="translation-result">' + html.escape(str(data.get("natural_translation") or "Not available")) + '</div>', unsafe_allow_html=True)
+    if not st.session_state.get("last_direction", "").startswith("Sanskrit"):
+        show_transliteration(str(data.get("natural_translation") or ""))
     selected = st.session_state.get("last_target_languages", [])
     if selected:
         st.markdown("### 🌐 Compare Languages")
@@ -231,7 +266,7 @@ else:
         if translated:
             speech_items.append({"name": language + " translation", "text": translated, "lang": speech_codes[language]})
     st.markdown("### 🔊 Listen to Translation")
-    st.caption("Listen to the original and each available translation. Playback uses your browser's installed voices; Sanskrit and some regional-language voices may not be available on every device.")
+    st.caption("Listen to the original and each available translation. Audio speed is set in Accessibility Settings. Voices depend on your browser; Sanskrit pronunciation may be inaccurate.")
     # JSON encoding prevents translation content from being interpreted as HTML or JS.
     speech_json = json.dumps(speech_items, ensure_ascii=False).replace("<", "\\u003c")
     speech_html = """<!doctype html><html><head><meta charset="utf-8"><style>
@@ -258,7 +293,7 @@ else:
       const item=items[Number(select.value)];
       if(!item||!item.text.trim()){status.textContent='No text available to read.';return;}
       const utterance=new SpeechSynthesisUtterance(item.text);
-      utterance.lang=item.lang;utterance.rate=0.88;
+      utterance.lang=item.lang;utterance.rate=__RATE__;
       const voices=synth.getVoices();
       const exact=voices.find(v=>v.lang.toLowerCase()===item.lang.toLowerCase());
       const similar=voices.find(v=>v.lang.toLowerCase().split('-')[0]===item.lang.toLowerCase().split('-')[0]);
@@ -271,7 +306,7 @@ else:
     };
     document.getElementById('stop').onclick=()=>{if(synth)synth.cancel();status.textContent='Playback stopped.';};
     window.addEventListener('pagehide',()=>{if(synth)synth.cancel();});
-    </script></body></html>""".replace("__ITEMS__", speech_json)
+    </script></body></html>""".replace("__ITEMS__", speech_json).replace("__RATE__", str(rate))
     components.html(speech_html, height=112, scrolling=False)
     st.markdown("**Literal translation**")
     st.write(str(data.get("literal_translation") or "Not available"))
@@ -299,11 +334,33 @@ else:
                         st.session_state["selected_word"] = index
                         st.rerun()
         item = available[st.session_state.get("selected_word", 0)]
+        show_transliteration(str(item.get("word", "")))
         st.markdown('<div class="word-detail"><div class="word-detail-title">' +
                     html.escape(str(item.get("word", ""))) +
                     '</div><strong>' + html.escape(str(item.get("meaning", ""))) +
                     '</strong><br><small>Selected word · AI-generated analysis</small></div>',
                     unsafe_allow_html=True)
+        # A dedicated speech control for the selected word; browser voices are approximate.
+        word_speech = json.dumps(str(item.get("word", "")), ensure_ascii=False).replace("<", "\\u003c")
+        word_audio_html = """<!doctype html><html><head><meta charset="utf-8"><style>
+        body{margin:0;font:15px system-ui,sans-serif}button{padding:10px 16px;border:2px solid #175b3d;
+        border-radius:10px;background:#175b3d;color:white;cursor:pointer}button:focus-visible{outline:3px solid #a6670c;outline-offset:3px}
+        #word-status{padding-left:10px;font-size:13px;color:#243e31}</style></head><body>
+        <button id="say" aria-label="Pronounce selected Sanskrit word">🔊 Pronounce word</button>
+        <button id="halt" aria-label="Stop word pronunciation">■ Stop</button>
+        <span id="word-status" role="status" aria-live="polite"></span><script>
+        const word=__WORD__,synth=window.speechSynthesis,status=document.getElementById('word-status');
+        if(!synth){document.getElementById('say').disabled=true;status.textContent='Speech is unavailable.';}
+        document.getElementById('say').onclick=()=>{if(!synth)return;synth.cancel();
+          const u=new SpeechSynthesisUtterance(word);u.lang='sa-IN';u.rate=__RATE__;
+          const voices=synth.getVoices();const voice=voices.find(v=>v.lang.toLowerCase().startsWith('sa'));
+          if(voice){u.voice=voice;status.textContent='Playing…';}
+          else status.textContent='No Sanskrit voice detected. Pronunciation may be inaccurate.';
+          u.onend=()=>status.textContent='Finished.';u.onerror=e=>{if(e.error!=='canceled')status.textContent='Speech unavailable.'};synth.speak(u)};
+        document.getElementById('halt').onclick=()=>{if(synth)synth.cancel();status.textContent='Stopped.'};
+        window.addEventListener('pagehide',()=>{if(synth)synth.cancel()});
+        </script></body></html>""".replace("__WORD__", word_speech).replace("__RATE__", str(rate))
+        components.html(word_audio_html, height=60, scrolling=False)
         left, right = st.columns(2)
         fields = [("Root / lemma", "lemma"), ("Part of speech", "part_of_speech"),
                   ("Case", "case"), ("Number", "number"), ("Gender", "gender"),
