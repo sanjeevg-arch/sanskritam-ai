@@ -24,3 +24,12 @@ Builds on v1.7 (private beta, image extraction, learning quizzes, compare langua
 - History is limited to the latest 50 entries in the UI; no bulk export or pagination in this version.
 - Existing translations from earlier versions are not backfilled.
 - Python syntax and ZIP integrity were checked; live Supabase and Streamlit UI tests were not performed.
+
+
+## v1.9 PDF Study Notes
+After translating a passage (or opening an item in History), expand **Customize PDF study notes**, choose the sections to include, click **Prepare PDF study notes**, then **Download PDF Study Notes**. No additional OpenAI requests are made. The generated PDF includes source text, natural and literal translations, selected-language translations, and optionally word analysis, grammar, and Sandhi. Quiz questions and personal details are not exported.
+
+### Deployment dependencies
+`requirements.txt` adds `weasyprint`. `packages.txt` installs `fonts-noto-core` on Streamlit Community Cloud for Indic-script rendering. Streamlit Cloud must install both Python and OS dependencies; if installation fails, inspect build logs. Font coverage may vary for some scripts. No additional Supabase migration is required.
+
+**Privacy:** PDF generation runs server-side using existing session results; PDFs are returned directly to the signed-in user, not uploaded to a third-party service. Avoid sharing PDFs containing sensitive text.

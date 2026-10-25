@@ -9,6 +9,7 @@ import streamlit.components.v1 as components
 from pathlib import Path
 from learning_mode import render_learning_mode
 from history import save_translation, render_history
+from study_notes import make_study_notes_pdf
 
 import streamlit as st
 from dotenv import load_dotenv
@@ -558,6 +559,40 @@ else:
         direction=st.session_state.get("last_direction", ""),
         user_id=str(beta_user.get("id", "")),
     )
+
+    st.markdown('<div class="result-heading blue">📄 PDF Study Notes · Study Offline</div>', unsafe_allow_html=True)
+    st.caption("Create a printable study guide from this translation. PDF generation is local and uses no AI tokens.")
+    with st.expander("Customize PDF study notes", expanded=False):
+        pdf_words = st.checkbox("Include word-by-word meanings", value=True, key="pdf_words")
+        pdf_grammar = st.checkbox("Include grammar explanation", value=True, key="pdf_grammar")
+        pdf_sandhi = st.checkbox("Include Sandhi & compounds", value=True, key="pdf_sandhi")
+        if st.button("Prepare PDF study notes", key="prepare_pdf", type="secondary"):
+            try:
+                with st.spinner("Preparing your PDF…"):
+                    pdf_bytes = make_study_notes_pdf(
+                        source=st.session_state.get("last_source", ""),
+                        direction=st.session_state.get("last_direction", ""),
+                        languages=st.session_state.get("last_target_languages", []),
+                        data=data, include_words=pdf_words,
+                        include_grammar=pdf_grammar, include_sandhi=pdf_sandhi,
+                    )
+                st.session_state["pdf_study_notes"] = pdf_bytes
+                st.session_state["pdf_notes_key"] = (
+                    st.session_state.get("last_source", ""),
+                    st.session_state.get("last_direction", ""),
+                    tuple(st.session_state.get("last_target_languages", [])),
+                )
+            except Exception as exc:
+                st.error(f"Could not create PDF study notes: {exc}")
+        current_pdf_key = (
+            st.session_state.get("last_source", ""),
+            st.session_state.get("last_direction", ""),
+            tuple(st.session_state.get("last_target_languages", [])),
+        )
+        if st.session_state.get("pdf_study_notes") and st.session_state.get("pdf_notes_key") == current_pdf_key:
+            st.download_button("⬇ Download PDF Study Notes", st.session_state["pdf_study_notes"],
+                               file_name="sanskritam-study-notes.pdf", mime="application/pdf",
+                               key="download_study_pdf")
 
     st.download_button("↓ Download complete analysis (JSON)",
                        data=json.dumps(data, ensure_ascii=False, indent=2),
