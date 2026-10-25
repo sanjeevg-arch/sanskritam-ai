@@ -8,6 +8,7 @@ import re
 import streamlit.components.v1 as components
 from pathlib import Path
 from learning_mode import render_learning_mode
+from history import save_translation, render_history
 
 import streamlit as st
 from dotenv import load_dotenv
@@ -196,7 +197,7 @@ with profile_area:
             for key in list(st.session_state.keys()):
                 if key.startswith(("beta_", "lesson_")) or key in (
                     "result", "last_source", "last_direction", "last_target_languages",
-                    "selected_word", "source_text", "last_example"
+                    "selected_word", "source_text", "last_example", "history_pending_open", "history_bookmarks_only"
                 ):
                     del st.session_state[key]
             st.rerun()
@@ -286,13 +287,29 @@ with st.expander("Upload an image of Sanskrit text", expanded=False):
                     st.warning("Only the first 1,000 characters can be transferred to the translation box.")
                 st.caption("The extracted text will appear in the translation input below. You can edit it there.")
 
+# Apply a saved entry BEFORE Streamlit widgets are instantiated. No AI call or quota use.
+if 'history_pending_open' in st.session_state:
+    entry = st.session_state.pop('history_pending_open')
+    st.session_state['result'] = entry['result']
+    st.session_state['last_source'] = entry['source_text']
+    st.session_state['last_direction'] = entry['direction']
+    st.session_state['last_target_languages'] = entry.get('languages') or []
+    st.session_state['selected_word'] = 0
+    st.session_state['lesson_attempts'] = {}
+    st.session_state['lesson_finished'] = False
+    st.session_state['source_text'] = entry['source_text']
+    st.session_state['history_restore_direction'] = entry['direction']
+    st.session_state['history_restore_languages'] = entry.get('languages') or []
+    st.session_state['last_example'] = (entry['direction'], 'Your own text')
+    st.toast('Saved translation opened — no AI tokens used.')
+
 st.subheader("Translation workspace")
 with st.container(border=True):
-    direction = st.radio("Translation direction", ["Sanskrit → English", "English → Sanskrit"], horizontal=True)
+    direction = st.radio("Translation direction", ["Sanskrit → English", "English → Sanskrit"], horizontal=True, index=(["Sanskrit → English", "English → Sanskrit"].index(st.session_state.pop("history_restore_direction", "Sanskrit → English"))))
     target_languages = st.multiselect(
         "Compare Languages — choose up to 3",
         [name for name in LANGUAGES if name != "English"],
-        default=["Hindi"],
+        default=st.session_state.pop("history_restore_languages", ["Hindi"]),
         format_func=lambda name: f"{name} · {LANGUAGES[name]['native']}",
         max_selections=3,
         help="English is shown automatically for Sanskrit input. Select up to three additional languages."
@@ -335,6 +352,11 @@ if submitted:
                 st.session_state["selected_word"] = 0
                 st.session_state["lesson_attempts"] = {}
                 st.session_state["lesson_finished"] = False
+                try:
+                    save_translation(beta_user, st.session_state["last_source"], direction,
+                                     target_languages, st.session_state["result"])
+                except BetaError:
+                    st.warning("Translation completed, but history could not be saved. Check history_setup.sql.")
             except (ValueError, json.JSONDecodeError):
                 try: finish(request_id, False)
                 except BetaError: pass
@@ -560,5 +582,7 @@ if data:
     st.warning("Educational prototype: translations, segmentation, and grammar may be incorrect. Not scholar-reviewed.")
 
 
+render_history(beta_user)
+
 st.divider()
-st.caption("Sanskritam AI · Ancient Wisdom. Modern Intelligence. · sanskritam.ai · Private Beta · Image Translation v1.7")
+st.caption("Sanskritam AI · Ancient Wisdom. Modern Intelligence. · sanskritam.ai · Private Beta · History & Bookmarks v1.8")
