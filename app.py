@@ -11,7 +11,11 @@ from dotenv import load_dotenv
 from openai import OpenAI
 from reference import lookup, compare_words
 from feedback import save_feedback
-from indic_transliteration import sanscript
+from private_beta import auth_gate, reserve, finish, new_request_id, BetaError
+try:
+    from indic_transliteration import sanscript
+except ImportError:
+    sanscript = None
 
 load_dotenv()
 BASE = Path(__file__).parent
@@ -137,10 +141,13 @@ def translate(source: str, direction: str, target_languages: list[str]) -> dict:
         raise ValueError("Unexpected response format")
     if not isinstance(data.get("translations"), dict):
         raise ValueError("Missing comparison translations")
+    data["_usage_tokens"] = int(getattr(getattr(result, "usage", None), "total_tokens", 0) or 0)
     return data
 
 
 # Accessibility controls apply to the results without triggering a new API request.
+beta_user = auth_gate()
+
 st.markdown("### ♿ Accessibility & Learning Settings")
 with st.expander("Customize reading and listening", expanded=False):
     size_choice = st.select_slider("Text size", options=["Small", "Medium", "Large", "Extra large"], value="Medium")
@@ -164,6 +171,8 @@ textarea{{font-size:{size_px}px!important}}
 
 def iast(text: str) -> str:
     """Deterministic Devanagari to IAST transliteration; not phonetic audio."""
+    if sanscript is None:
+        return "IAST unavailable (install indic-transliteration)."
     return sanscript.transliterate(text, sanscript.DEVANAGARI, sanscript.IAST)
 
 
@@ -188,7 +197,7 @@ with st.container(border=True):
     if st.session_state.get("last_example") != (direction, example):
         st.session_state["source_text"] = starter
         st.session_state["last_example"] = (direction, example)
-    source = st.text_area("Enter text", key="source_text", height=150, max_chars=1600,
+    source = st.text_area("Enter text", key="source_text", height=150, max_chars=1000,
                           placeholder="Type or paste Sanskrit here…" if direction.startswith("Sanskrit") else "Type English here…")
     learn = st.toggle("Beginner learning mode", value=True, help="Show word cards and an extra learning tip.")
     submitted = st.button("✦ Translate & Analyze", type="primary", use_container_width=True)
@@ -200,16 +209,28 @@ if submitted:
     elif not api_key():
         st.error("API key not found. Add OPENAI_API_KEY to your local .env or Streamlit Cloud secrets.")
     else:
+        request_id = new_request_id()
+        try:
+            allowance = reserve(beta_user, request_id)
+            st.caption(f"Daily translations remaining after this request: {allowance['remaining_today']}")
+        except BetaError as exc:
+            st.error(str(exc))
+            st.stop()
         with st.spinner("Translating and analyzing…"):
             try:
                 st.session_state["result"] = translate(source.strip(), direction, target_languages)
+                finish(request_id, True, st.session_state["result"].pop("_usage_tokens", 0))
                 st.session_state["last_target_languages"] = target_languages.copy()
                 st.session_state["last_source"] = source.strip()
                 st.session_state["last_direction"] = direction
                 st.session_state["selected_word"] = 0
             except (ValueError, json.JSONDecodeError):
+                try: finish(request_id, False)
+                except BetaError: pass
                 st.error("The AI response was incomplete. Please try again.")
             except Exception as exc:
+                try: finish(request_id, False)
+                except BetaError: pass
                 st.error("Could not translate. Check your API key, billing, and internet connection.")
                 st.caption(f"Error category: {type(exc).__name__}")
 data = st.session_state.get("result")
@@ -422,4 +443,4 @@ if data:
 
 
 st.divider()
-st.caption("Sanskritam AI · Ancient Wisdom. Modern Intelligence. · sanskritam.ai · Hackathon v1.2")
+st.caption("Sanskritam AI · Ancient Wisdom. Modern Intelligence. · sanskritam.ai · Private Beta v1.5")
