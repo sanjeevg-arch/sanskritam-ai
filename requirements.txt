@@ -3,4 +3,5 @@ openai
 python-dotenv
 indic-transliteration>=2.3,<3
 requests>=2.31,<3
-weasyprint>=62,<69
+reportlab>=4.2,<5
+Pillow>=10,<13
