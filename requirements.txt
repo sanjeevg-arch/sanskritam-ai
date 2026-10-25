@@ -1,3 +1,4 @@
 streamlit
 openai
 python-dotenv
+indic-transliteration>=2.3,<3
