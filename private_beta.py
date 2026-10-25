@@ -114,13 +114,6 @@ def auth_gate():
             user = current_user(token)  # Verified against Supabase on every rerun.
             if not invited(normalize_email(user['email'])):
                 raise BetaError('Your invitation is no longer active.')
-            with st.sidebar:
-                st.success('Private beta access')
-                st.caption(user['email'])
-                if st.button('Sign out'):
-                    for key in ('beta_access_token', 'beta_email', 'result', 'last_source'):
-                        st.session_state.pop(key, None)
-                    st.rerun()
             return user
         except BetaError:
             st.session_state.pop('beta_access_token', None)

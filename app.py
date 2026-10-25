@@ -1,10 +1,11 @@
-"""Sanskritam AI v1.4 — Accessibility & Learning Edition."""
+"""Sanskritam AI v1.6 — Secure Private Beta + Interactive Learning."""
 import json
 import html
 import os
 import re
 import streamlit.components.v1 as components
 from pathlib import Path
+from learning_mode import render_learning_mode
 
 import streamlit as st
 from dotenv import load_dotenv
@@ -148,6 +149,25 @@ def translate(source: str, direction: str, target_languages: list[str]) -> dict:
 # Accessibility controls apply to the results without triggering a new API request.
 beta_user = auth_gate()
 
+# Authenticated account controls live in the page header, not the sidebar.
+profile_spacer, profile_area = st.columns([5, 2], vertical_alignment="center")
+with profile_area:
+    profile_email = str(beta_user.get("email", ""))
+    profile_label = profile_email.split("@", 1)[0][:20] or "Account"
+    with st.popover("👤 " + profile_label, use_container_width=True):
+        st.markdown("**Signed in as**")
+        st.caption(profile_email)
+        if st.button("↪ Sign out", key="profile_sign_out", use_container_width=True):
+            # Remove account-scoped data before allowing another user to sign in.
+            for key in list(st.session_state.keys()):
+                if key.startswith(("beta_", "lesson_")) or key in (
+                    "result", "last_source", "last_direction", "last_target_languages",
+                    "selected_word", "source_text", "last_example"
+                ):
+                    del st.session_state[key]
+            st.rerun()
+
+
 st.markdown("### ♿ Accessibility & Learning Settings")
 with st.expander("Customize reading and listening", expanded=False):
     size_choice = st.select_slider("Text size", options=["Small", "Medium", "Large", "Extra large"], value="Medium")
@@ -224,6 +244,8 @@ if submitted:
                 st.session_state["last_source"] = source.strip()
                 st.session_state["last_direction"] = direction
                 st.session_state["selected_word"] = 0
+                st.session_state["lesson_attempts"] = {}
+                st.session_state["lesson_finished"] = False
             except (ValueError, json.JSONDecodeError):
                 try: finish(request_id, False)
                 except BetaError: pass
@@ -419,6 +441,13 @@ else:
     st.markdown('<p class="result-intro">Explore how sounds and words join together.</p>', unsafe_allow_html=True)
     st.write(str(data.get("sandhi_explanation") or "No sandhi analysis available."))
 
+    render_learning_mode(
+        data=data,
+        source=st.session_state.get("last_source", ""),
+        direction=st.session_state.get("last_direction", ""),
+        user_id=str(beta_user.get("id", "")),
+    )
+
     st.download_button("↓ Download complete analysis (JSON)",
                        data=json.dumps(data, ensure_ascii=False, indent=2),
                        file_name="sanskritam-analysis.json", mime="application/json")
@@ -443,4 +472,4 @@ if data:
 
 
 st.divider()
-st.caption("Sanskritam AI · Ancient Wisdom. Modern Intelligence. · sanskritam.ai · Private Beta v1.5")
+st.caption("Sanskritam AI · Ancient Wisdom. Modern Intelligence. · sanskritam.ai · Private Beta · Interactive Learning v1.6")
