@@ -325,11 +325,11 @@ with st.expander("Upload an image of Sanskrit text", expanded=False):
                                 st.success("Text extracted. Review and correct it below before translating.")
                                 st.caption(f"Requests remaining today: {allowance['remaining_today']}")
                             except ValueError as exc:
-                                try: finish(request_id, False)
+                                try: finish(request_id, False, operation="image_ocr", model="gpt-4.1-mini")
                                 except BetaError: pass
                                 st.warning(str(exc))
                             except Exception as exc:
-                                try: finish(request_id, False)
+                                try: finish(request_id, False, operation="image_ocr", model="gpt-4.1-mini")
                                 except BetaError: pass
                                 st.error("Could not read the image. Check your API billing and try a clearer image.")
                                 st.caption(f"Error category: {type(exc).__name__}")
@@ -371,11 +371,11 @@ with st.expander("Record Sanskrit speech", expanded=False):
                                 st.success("Transcription ready. Review it in the translation box below.")
                                 st.caption(f"Requests remaining today: {allowance['remaining_today']}")
                             except ValueError as exc:
-                                try: finish(request_id, False)
+                                try: finish(request_id, False, operation="voice_transcription", model="gpt-4o-transcribe")
                                 except BetaError: pass
                                 st.warning(str(exc))
                             except Exception as exc:
-                                try: finish(request_id, False)
+                                try: finish(request_id, False, operation="voice_transcription", model="gpt-4o-transcribe")
                                 except BetaError: pass
                                 st.error("Speech transcription failed. Check your API billing and try again.")
                                 st.caption(f"Error category: {type(exc).__name__}")
@@ -446,28 +446,49 @@ if submitted:
             st.stop()
         with st.spinner("Translating and analyzing…"):
             try:
-                st.session_state["result"] = translate(source.strip(), direction, target_languages)
-                finish(request_id, True, st.session_state["result"].pop("_usage_tokens", 0), operation="translation", model="gpt-4.1-mini", input_tokens=st.session_state["result"].pop("_usage_input", 0), output_tokens=st.session_state["result"].pop("_usage_output", 0))
-                st.session_state["last_target_languages"] = target_languages.copy()
-                st.session_state["last_source"] = source.strip()
-                st.session_state["last_direction"] = direction
-                st.session_state["selected_word"] = 0
-                st.session_state["lesson_attempts"] = {}
-                st.session_state["lesson_finished"] = False
-                try:
-                    save_translation(beta_user, st.session_state["last_source"], direction,
-                                     target_languages, st.session_state["result"])
-                except BetaError:
-                    st.warning("Translation completed, but history could not be saved. Check history_setup.sql.")
+                translated = translate(source.strip(), direction, target_languages)
             except (ValueError, json.JSONDecodeError):
-                try: finish(request_id, False)
-                except BetaError: pass
+                try:
+                    finish(request_id, False, operation="translation", model="gpt-4.1-mini")
+                except BetaError:
+                    pass
                 st.error("The AI response was incomplete. Please try again.")
             except Exception as exc:
-                try: finish(request_id, False)
-                except BetaError: pass
+                try:
+                    finish(request_id, False, operation="translation", model="gpt-4.1-mini")
+                except BetaError:
+                    pass
                 st.error("Could not translate. Check your API key, billing, and internet connection.")
                 st.caption(f"Error category: {type(exc).__name__}")
+            else:
+                # Persist the actual Responses API usage with the metered RPC.
+                # Do not silently fall back to the legacy RPC: it loses model and
+                # input/output token fields required by the admin cost dashboard.
+                total_tokens = int(translated.pop("_usage_tokens", 0) or 0)
+                input_tokens = int(translated.pop("_usage_input", 0) or 0)
+                output_tokens = int(translated.pop("_usage_output", 0) or 0)
+                try:
+                    finish(
+                        request_id, True, total_tokens,
+                        operation="translation", model="gpt-4.1-mini",
+                        input_tokens=input_tokens, output_tokens=output_tokens,
+                    )
+                except BetaError:
+                    st.error("Translation succeeded, but usage recording failed. Check the metered Supabase RPC and Streamlit logs.")
+                else:
+                    st.session_state["result"] = translated
+                    st.session_state["last_target_languages"] = target_languages.copy()
+                    st.session_state["last_source"] = source.strip()
+                    st.session_state["last_direction"] = direction
+                    st.session_state["selected_word"] = 0
+                    st.session_state["lesson_attempts"] = {}
+                    st.session_state["lesson_finished"] = False
+                    try:
+                        save_translation(beta_user, st.session_state["last_source"], direction,
+                                         target_languages, translated)
+                    except BetaError:
+                        st.warning("Translation completed, but history could not be saved. Check history_setup.sql.")
+
 data = st.session_state.get("result")
 st.subheader("Your translation & analysis")
 if not data:
