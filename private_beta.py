@@ -102,9 +102,13 @@ def reserve(user, request_id):
     return result
 
 
-def finish(request_id, success, tokens=0):
-    _request('POST', '/rest/v1/rpc/finish_beta_request', service=True, payload={
-        'p_request_id': request_id, 'p_success': bool(success), 'p_tokens': max(0, int(tokens))
+def finish(request_id, success, tokens=0, *, operation='unknown', model='unknown', input_tokens=0, output_tokens=0):
+    # New metered RPC preserves atomic quota completion and usage recording.
+    _request('POST', '/rest/v1/rpc/finish_beta_request_metered', service=True, payload={
+        'p_request_id': request_id, 'p_success': bool(success),
+        'p_tokens': max(0, int(tokens)), 'p_operation': str(operation)[:50],
+        'p_model': str(model)[:80], 'p_input_tokens': max(0, int(input_tokens)),
+        'p_output_tokens': max(0, int(output_tokens))
     })
 
 

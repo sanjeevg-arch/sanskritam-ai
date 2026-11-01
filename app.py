@@ -15,6 +15,7 @@ from flashcards import render_flashcards
 from daily_plan import render_daily_plan
 from grammar_lab import render_grammar_lab
 from corrections import render_corrections
+from admin_cost_dashboard import render_admin_cost_dashboard
 from history import save_translation, render_history
 from study_notes import make_study_notes_pdf
 
@@ -153,7 +154,10 @@ def translate(source: str, direction: str, target_languages: list[str]) -> dict:
         raise ValueError("Unexpected response format")
     if not isinstance(data.get("translations"), dict):
         raise ValueError("Missing comparison translations")
-    data["_usage_tokens"] = int(getattr(getattr(result, "usage", None), "total_tokens", 0) or 0)
+    usage = getattr(result, "usage", None)
+    data["_usage_tokens"] = int(getattr(usage, "total_tokens", 0) or 0)
+    data["_usage_input"] = int(getattr(usage, "input_tokens", 0) or 0)
+    data["_usage_output"] = int(getattr(usage, "output_tokens", 0) or 0)
     return data
 
 
@@ -186,6 +190,7 @@ def extract_sanskrit_from_image(image_bytes: bytes, mime_type: str) -> tuple[str
     if not extracted or extracted == "NO_SANSKRIT_FOUND":
         raise ValueError("No legible Sanskrit was detected. Try a clearer, well-lit image.")
     tokens = int(getattr(getattr(result, "usage", None), "total_tokens", 0) or 0)
+    st.session_state["ocr_usage_detail"] = (int(getattr(getattr(result, "usage", None), "input_tokens", 0) or 0), int(getattr(getattr(result, "usage", None), "output_tokens", 0) or 0))
     return extracted, tokens
 
 
@@ -245,6 +250,7 @@ with profile_area:
 
 
 render_dashboard(beta_user)
+render_admin_cost_dashboard(beta_user)
 render_daily_plan(beta_user)
 render_grammar_lab(beta_user)
 render_flashcards(beta_user, widget_id="dashboard")
@@ -313,7 +319,7 @@ with st.expander("Upload an image of Sanskrit text", expanded=False):
                         with st.spinner("Reading Sanskrit from the image…"):
                             try:
                                 extracted, tokens = extract_sanskrit_from_image(image_bytes, mime)
-                                finish(request_id, True, tokens)
+                                finish(request_id, True, tokens, operation="image_ocr", model="gpt-4.1-mini", input_tokens=st.session_state.get("ocr_usage_detail", (0,0))[0], output_tokens=st.session_state.get("ocr_usage_detail", (0,0))[1])
                                 st.session_state["ocr_extracted"] = extracted
                                 st.session_state["ocr_pending_text"] = extracted[:1000]
                                 st.success("Text extracted. Review and correct it below before translating.")
@@ -359,7 +365,7 @@ with st.expander("Record Sanskrit speech", expanded=False):
                         with st.spinner("Transcribing Sanskrit speech…"):
                             try:
                                 transcript, tokens = transcribe_sanskrit_audio(voice_bytes)
-                                finish(request_id, True, tokens)
+                                finish(request_id, True, tokens, operation="voice_transcription", model="gpt-4o-transcribe")
                                 st.session_state["voice_transcript"] = transcript
                                 st.session_state["voice_pending_text"] = transcript[:1000]
                                 st.success("Transcription ready. Review it in the translation box below.")
@@ -441,7 +447,7 @@ if submitted:
         with st.spinner("Translating and analyzing…"):
             try:
                 st.session_state["result"] = translate(source.strip(), direction, target_languages)
-                finish(request_id, True, st.session_state["result"].pop("_usage_tokens", 0))
+                finish(request_id, True, st.session_state["result"].pop("_usage_tokens", 0), operation="translation", model="gpt-4.1-mini", input_tokens=st.session_state["result"].pop("_usage_input", 0), output_tokens=st.session_state["result"].pop("_usage_output", 0))
                 st.session_state["last_target_languages"] = target_languages.copy()
                 st.session_state["last_source"] = source.strip()
                 st.session_state["last_direction"] = direction
