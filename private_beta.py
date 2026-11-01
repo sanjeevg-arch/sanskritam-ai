@@ -23,12 +23,14 @@ class BetaError(Exception):
     pass
 
 
-def _request(method, path, *, service=False, token=None, payload=None):
+def _request(method, path, *, service=False, token=None, payload=None, prefer=None):
     url = (setting('SUPABASE_URL') or '').rstrip('/')
     key = setting('SUPABASE_SERVICE_ROLE_KEY' if service else 'SUPABASE_ANON_KEY')
     if not url or not key:
         raise BetaError('Supabase configuration is missing. Contact the administrator.')
     headers = {'apikey': key, 'Content-Type': 'application/json'}
+    if prefer:
+        headers['Prefer'] = prefer
     headers['Authorization'] = 'Bearer ' + (token or key)
     try:
         response = requests.request(method, url + path, headers=headers, json=payload, timeout=15)

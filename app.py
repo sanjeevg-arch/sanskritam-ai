@@ -11,6 +11,7 @@ import streamlit.components.v1 as components
 from pathlib import Path
 from learning_mode import render_learning_mode
 from learning_dashboard import render_dashboard
+from flashcards import render_flashcards
 from history import save_translation, render_history
 from study_notes import make_study_notes_pdf
 
@@ -241,6 +242,7 @@ with profile_area:
 
 
 render_dashboard(beta_user)
+render_flashcards(beta_user)
 
 st.markdown("### ♿ Accessibility & Learning Settings")
 with st.expander("Customize reading and listening", expanded=False):
@@ -640,6 +642,8 @@ else:
     st.markdown('<div class="result-heading purple">🔗 Sandhi & Compounds</div>', unsafe_allow_html=True)
     st.markdown('<p class="result-intro">Explore how sounds and words join together.</p>', unsafe_allow_html=True)
     st.write(str(data.get("sandhi_explanation") or "No sandhi analysis available."))
+
+    render_flashcards(beta_user, available)
 
     render_learning_mode(
         data=data,

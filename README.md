@@ -1,35 +1,35 @@
-# Sanskritam AI v1.8 — Translation History & Bookmarks
+# Sanskritam AI v2.1 — Personalized Learning Dashboard
 
-Builds on v1.7 (private beta, image extraction, learning quizzes, compare languages, accessibility).
+Based on v2.0 Voice Input Edition. All existing features remain in the project.
 
-## Setup
-1. Back up your existing GitHub repository and Supabase project.
-2. In **Supabase → SQL Editor**, run **`history_setup.sql`** once. Keep the earlier `supabase_setup.sql` tables/functions; this migration only adds history.
-3. Upload **`app.py`** and new **`history.py`** along with the existing project files to GitHub.
-4. Keep existing Streamlit secrets: `OPENAI_API_KEY`, `SUPABASE_URL`, `SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY`. Never commit keys.
-5. Redeploy Streamlit Cloud. No new Python dependencies are required.
+## Deploy
+1. Back up your repository. Copy the updated project files into your GitHub repository.
+2. In Supabase > SQL Editor, run **dashboard_setup.sql** once. Keep all previous database tables and setup scripts.
+3. Retain existing Streamlit Secrets (OpenAI and Supabase keys). No new secrets or dependencies are required.
+4. Commit and push to GitHub; allow Streamlit Community Cloud to redeploy.
+5. Sign in as an invited user, translate a Sanskrit sentence with 3+ distinct words, and complete the Learn This Sentence quiz.
+6. Open **📊 My Learning Dashboard** near the top of the app. It shows attempts, lessons, questions, accuracy, UTC-day practice streak, and recent attempts.
 
-## Usage
-- Sign in with an invited account and translate a passage. A successful translation is automatically saved to Supabase.
-- Scroll to **Translation History & Bookmarks** to browse the 50 most recent entries.
-- Click **⭐ Bookmark** to mark an entry; **Show bookmarks only** filters the list.
-- Click **📖 Open** to restore the saved result and learning content without another AI request or quota charge.
-- Click **🗑️ Delete** to remove an entry. Deletion is immediate.
-- History is private per verified Supabase Auth user ID, persisted across Streamlit restarts.
-
-## Notes
-- The existing OpenAI request quota remains enforced for NEW translations and image extraction. Reopening a saved translation does not call OpenAI.
-- Supabase service-role credentials are used only in server-side Python; every history operation filters by the verified account's user ID.
-- The app stores submitted source text and generated analyses in Supabase. Inform beta testers and obtain consent; do not submit sensitive material.
-- History is limited to the latest 50 entries in the UI; no bulk export or pagination in this version.
-- Existing translations from earlier versions are not backfilled.
-- Python syntax and ZIP integrity were checked; live Supabase and Streamlit UI tests were not performed.
+## Behavior and limits
+- Quiz results are saved in Supabase, scoped by verified user UUID; no extra OpenAI requests.
+- No quiz attempt is stored until all questions have been answered. Retry generates a new attempt.
+- Dashboard displays the 500 latest attempts; this is not an all-time tally for users with more than 500 attempts.
+- Database calls use the existing server-only service key. Keep it out of GitHub.
+- A failed progress save shows a warning without preventing the quiz result from displaying.
+- AI-generated vocabulary analysis may contain errors.
+- Live Supabase/Streamlit testing has not been performed.
 
 
-## v1.9 PDF Study Notes
-After translating a passage (or opening an item in History), expand **Customize PDF study notes**, choose the sections to include, click **Prepare PDF study notes**, then **Download PDF Study Notes**. No additional OpenAI requests are made. The generated PDF includes source text, natural and literal translations, selected-language translations, and optionally word analysis, grammar, and Sandhi. Quiz questions and personal details are not exported.
+## Quiz progress hotfix (v2.1.1)
 
-### Deployment dependencies
-`requirements.txt` adds `weasyprint`. `packages.txt` installs `fonts-noto-core` on Streamlit Community Cloud for Indic-script rendering. Streamlit Cloud must install both Python and OS dependencies; if installation fails, inspect build logs. Font coverage may vary for some scripts. No additional Supabase migration is required.
+**Important:** Deploy `learning_mode.py`, `learning_dashboard.py`, and `app.py` together.
+The older `learning_mode.py` displays “Progress is stored only in this browser session” and never saves a quiz. If that message appears, your deployed module is outdated.
 
-**Privacy:** PDF generation runs server-side using existing session results; PDFs are returned directly to the signed-in user, not uploaded to a third-party service. Avoid sharing PDFs containing sensitive text.
+1. Run `dashboard_setup.sql` in Supabase SQL Editor once.
+2. Replace the three files above in the **same GitHub directory** that Streamlit Cloud uses for `app.py`. Commit and push.
+3. In Streamlit Cloud, reboot the app if needed.
+4. Complete a **new** quiz. You should see “Progress saved to Supabase”.
+5. Expand My Learning Dashboard and click **Refresh dashboard**.
+6. If saving fails, check Streamlit logs and verify `SUPABASE_SERVICE_ROLE_KEY` in Streamlit Secrets. Never share the key.
+
+A previously completed quiz from the old session-only code cannot be recovered from Supabase because it was never saved.
