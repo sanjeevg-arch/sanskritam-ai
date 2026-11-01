@@ -33,7 +33,7 @@ def _request(method, path, *, service=False, token=None, payload=None, prefer=No
         headers['Prefer'] = prefer
     headers['Authorization'] = 'Bearer ' + (token or key)
     try:
-        response = requests.request(method, url + path, headers=headers, json=payload, timeout=15)
+        response = requests.request(method, url + path, headers=headers, json=payload, timeout=(5, 20))
     except requests.RequestException as exc:
         raise BetaError('Could not connect to the authentication service.') from exc
     if not response.ok:
@@ -112,6 +112,22 @@ def finish(request_id, success, tokens=0, *, operation='unknown', model='unknown
     })
 
 
+def sign_out(token):
+    """Best-effort Supabase session revocation; always clear local session state."""
+    if token:
+        try:
+            _request('POST', '/auth/v1/logout', token=token)
+        except BetaError:
+            # A stale or unreachable session must not prevent local logout.
+            pass
+
+
+def clear_account_session():
+    """Remove all Streamlit session values to prevent cross-account data leakage."""
+    for key in list(st.session_state.keys()):
+        del st.session_state[key]
+
+
 def auth_gate():
     st.markdown('## 🔒 Sanskritam AI · Private Beta')
     token = st.session_state.get('beta_access_token')
@@ -122,7 +138,7 @@ def auth_gate():
                 raise BetaError('Your invitation is no longer active.')
             return user
         except BetaError:
-            st.session_state.pop('beta_access_token', None)
+            clear_account_session()
             st.warning('Please sign in again to continue.')
     st.info('Access is limited to invited testers. Sign in using your approved email address.')
     email = st.text_input('Invited email address', key='beta_email').strip().lower()

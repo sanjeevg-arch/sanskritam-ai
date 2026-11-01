@@ -24,7 +24,7 @@ from dotenv import load_dotenv
 from openai import OpenAI
 from reference import lookup, compare_words
 from feedback import save_feedback
-from private_beta import auth_gate, reserve, finish, new_request_id, BetaError
+from private_beta import sign_out, clear_account_session, auth_gate, reserve, finish, new_request_id, BetaError
 try:
     from indic_transliteration import sanscript
 except ImportError:
@@ -279,13 +279,8 @@ with profile_area:
         st.markdown("**Signed in as**")
         st.caption(profile_email)
         if st.button("↪ Sign out", key="profile_sign_out", use_container_width=True):
-            # Remove account-scoped data before allowing another user to sign in.
-            for key in list(st.session_state.keys()):
-                if key.startswith(("beta_", "lesson_")) or key in (
-                    "result", "last_source", "last_direction", "last_target_languages",
-                    "selected_word", "source_text", "last_example", "history_pending_open", "history_bookmarks_only"
-                ):
-                    del st.session_state[key]
+            sign_out(st.session_state.get('beta_access_token'))
+            clear_account_session()
             st.rerun()
 
 

@@ -19,7 +19,11 @@ def estimate(row):
     if not a and not b: return None
     return (a * rate('COST_GPT41_MINI_INPUT_PER_M', 0.40) + b * rate('COST_GPT41_MINI_OUTPUT_PER_M', 1.60))/1_000_000
 
-def fetch_usage(days=30):
+def fetch_usage(days=30, *, user=None):
+    if user is None or not is_admin(user):
+        raise BetaError("Administrator access required.")
+    if days not in (7, 30, 90):
+        raise BetaError("Invalid reporting window.")
     # A date-only PostgREST filter avoids URL-encoded timezone punctuation issues.
     cutoff=(datetime.now(timezone.utc)-timedelta(days=days)).date().isoformat()
     # Pagination avoids silently truncating at Supabase's usual 1,000-row default.
@@ -40,7 +44,7 @@ def render_admin_cost_dashboard(user):
         st.caption('Private usage data. Estimates are not OpenAI invoices. Costs for audio transcription and legacy rows may be unknown.')
         days=st.selectbox('Reporting window (UTC)',[7,30,90],index=1,key='admin_cost_days')
         if st.button('Refresh AI usage',key='admin_cost_refresh',use_container_width=True): st.rerun()
-        try: rows,truncated=fetch_usage(days)
+        try: rows,truncated=fetch_usage(days, user=user)
         except BetaError as exc:
             st.error('Usage unavailable: '+str(exc))
             st.info('In Supabase SQL Editor, run admin_cost_diagnostics.sql included in this package. Confirm all expected beta_requests columns exist. If a column is missing, rerun admin_cost_setup.sql.'); return
