@@ -1,7 +1,6 @@
 """Administrator-only usage metrics, based on Supabase request logs."""
 from collections import defaultdict
 from datetime import date, timedelta, timezone, datetime
-from urllib.parse import quote
 import pandas as pd
 import streamlit as st
 from corrections import is_admin
@@ -21,11 +20,14 @@ def estimate(row):
     return (a * rate('COST_GPT41_MINI_INPUT_PER_M', 0.40) + b * rate('COST_GPT41_MINI_OUTPUT_PER_M', 1.60))/1_000_000
 
 def fetch_usage(days=30):
-    cutoff=(datetime.now(timezone.utc)-timedelta(days=days)).isoformat()
+    # A date-only PostgREST filter avoids URL-encoded timezone punctuation issues.
+    cutoff=(datetime.now(timezone.utc)-timedelta(days=days)).date().isoformat()
     # Pagination avoids silently truncating at Supabase's usual 1,000-row default.
     rows=[]
     for start in range(0, 20000, 1000):
-        path='/rest/v1/beta_requests?select=created_at,usage_day,email,state,total_tokens,input_tokens,output_tokens,operation,model&created_at=gte.'+quote(cutoff,safe=':-+.')+'&order=created_at.desc&limit=1000&offset='+str(start)
+        path=('/rest/v1/beta_requests?select=created_at,usage_day,email,state,total_tokens,'
+              'input_tokens,output_tokens,operation,model&usage_day=gte.'+cutoff
+              +'&order=created_at.desc&limit=1000&offset='+str(start))
         batch=_request('GET',path,service=True)
         if not isinstance(batch,list): raise BetaError('Unexpected usage response.')
         rows.extend(batch)
@@ -40,7 +42,8 @@ def render_admin_cost_dashboard(user):
         if st.button('Refresh AI usage',key='admin_cost_refresh'): st.rerun()
         try: rows,truncated=fetch_usage(days)
         except BetaError as exc:
-            st.error('Usage unavailable. Run admin_cost_setup.sql and verify Supabase configuration. '+str(exc)); return
+            st.error('Usage unavailable: '+str(exc))
+            st.info('In Supabase SQL Editor, run admin_cost_diagnostics.sql included in this package. Confirm all expected beta_requests columns exist. If a column is missing, rerun admin_cost_setup.sql.'); return
         if truncated: st.warning('Showing the newest 20,000 records only; totals may be incomplete.')
         if not rows: st.info('No AI requests in the selected reporting window.'); return
         done=[r for r in rows if r.get('state')=='completed']
