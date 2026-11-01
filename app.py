@@ -14,6 +14,7 @@ from learning_dashboard import render_dashboard
 from flashcards import render_flashcards
 from daily_plan import render_daily_plan
 from grammar_lab import render_grammar_lab
+from corrections import render_corrections
 from history import save_translation, render_history
 from study_notes import make_study_notes_pdf
 
@@ -695,25 +696,16 @@ else:
                        file_name="sanskritam-analysis.json", mime="application/json")
 
 if data:
-    with st.expander("📝 Report an issue with this translation"):
-        with st.form("translation_feedback", clear_on_submit=True):
-            rating = st.radio("Was this result helpful?", ["Yes", "Partly", "No"], horizontal=True)
-            category = st.selectbox("Issue type", ["Translation", "Word meaning", "Grammar", "Sandhi", "Other"])
-            comment = st.text_area("What should be corrected? (optional)", max_chars=1000)
-            sent = st.form_submit_button("Submit feedback")
-            if sent:
-                try:
-                    save_feedback(st.session_state.get("last_source", ""),
-                                  st.session_state.get("last_direction", ""), rating, category, comment)
-                    st.success("Feedback saved locally. Thank you!")
-                except Exception:
-                    st.error("Could not save feedback. Check write permissions on the server.")
-        st.caption("Feedback and source text are saved in a local SQLite file. On free ephemeral hosting, feedback may be lost after restarts. Do not enter private information.")
+    render_corrections(beta_user, st.session_state.get('last_source',''),
+                       st.session_state.get('last_direction',''), data)
 
     st.warning("Educational prototype: translations, segmentation, and grammar may be incorrect. Not scholar-reviewed.")
 
 
+if not data:
+    render_corrections(beta_user)
+
 render_history(beta_user)
 
 st.divider()
-st.caption("Sanskritam AI · Ancient Wisdom. Modern Intelligence. · sanskritam.ai · Private Beta · History & Bookmarks v1.8")
+st.caption("Sanskritam AI · Ancient Wisdom. Modern Intelligence. · sanskritam.ai · Private Beta · Accuracy & Corrections v2.5")
