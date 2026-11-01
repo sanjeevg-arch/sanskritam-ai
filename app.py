@@ -13,6 +13,7 @@ from learning_mode import render_learning_mode
 from learning_dashboard import render_dashboard
 from flashcards import render_flashcards
 from daily_plan import render_daily_plan
+from grammar_lab import render_grammar_lab
 from history import save_translation, render_history
 from study_notes import make_study_notes_pdf
 
@@ -244,6 +245,7 @@ with profile_area:
 
 render_dashboard(beta_user)
 render_daily_plan(beta_user)
+render_grammar_lab(beta_user)
 render_flashcards(beta_user, widget_id="dashboard")
 
 st.markdown("### ♿ Accessibility & Learning Settings")
