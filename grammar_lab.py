@@ -88,7 +88,7 @@ def render_grammar_lab(user):
                         st.info('Correct answer: '+options[correct])
                 else:
                     choice=st.radio('Select an answer',options,index=None,key=f'grammar_choice_{lesson_id}_{i}',label_visibility='collapsed')
-                    if st.button('Check answer',key=f'grammar_check_{lesson_id}_{i}',disabled=choice is None):
+                    if st.button('Check answer',key=f'grammar_check_{lesson_id}_{i}',disabled=choice is None,use_container_width=True):
                         state['answers'][i]=options.index(choice)
                         st.rerun()
         if len(state['answers'])==len(questions):

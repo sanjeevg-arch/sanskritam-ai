@@ -79,6 +79,46 @@ div[data-testid="stButton"] button[kind="secondary"]:hover{border-color:#267344;
   color:#153e2c;margin:.6rem 0 1rem}
 @media(max-width:650px){.hero{padding:1.25rem}.block-container{padding-left:1rem;padding-right:1rem}}
 @media(prefers-reduced-motion:reduce){*,*:before,*:after{animation:none!important;transition:none!important}}
+
+/* v2.7 mobile-first and accessible interaction layer. */
+html { scroll-padding-top: 1rem; }
+.stApp, .block-container { min-width: 0; }
+.stMarkdown, [data-testid="stMarkdownContainer"], .translation-result,
+.comparison-text, .word-detail, .wordcard { overflow-wrap: anywhere; word-break: normal; }
+[data-testid="stWidgetLabel"] label, [data-testid="stMarkdownContainer"] p { line-height: 1.55; }
+[data-testid="stButton"] button, [data-testid="stDownloadButton"] button,
+[data-testid="stFormSubmitButton"] button { min-height: 44px; }
+:where(button, input, textarea, select, [role="radio"], [role="checkbox"], [tabindex]):focus-visible {
+  outline: 3px solid #9b6014 !important; outline-offset: 3px !important;
+}
+@media (max-width: 700px) {
+  .block-container { padding: .75rem .85rem 4rem !important; max-width: 100% !important; }
+  .hero { padding: 1rem !important; border-radius: 15px; margin: .7rem 0; }
+  .hero h1 { font-size: clamp(1.7rem, 7vw, 2.25rem); line-height: 1.18; }
+  .hero p { font-size: 1rem; line-height: 1.55; }
+  .brand { font-size: 1.05rem; overflow-wrap: anywhere; }
+  .features { grid-template-columns: repeat(2, minmax(0,1fr)); gap: 8px; }
+  .feature { min-height: auto; padding: .75rem; }
+  [data-testid="stHorizontalBlock"] { flex-wrap: wrap !important; gap: .65rem !important; }
+  [data-testid="stHorizontalBlock"] > [data-testid="stColumn"] {
+    flex: 1 1 100% !important; width: 100% !important; min-width: 0 !important;
+  }
+  [data-testid="stButton"] button, [data-testid="stDownloadButton"] button,
+  [data-testid="stFormSubmitButton"] button { width: 100%; min-height: 48px; white-space: normal; }
+  [data-testid="stMetric"] { padding: .25rem 0; }
+  [data-testid="stMetricValue"] { font-size: 1.5rem; }
+  .wordcard { min-height: 0; }
+  .word-detail-title { font-size: 1.4rem; }
+  .translation-result { padding: .9rem; font-size: var(--mobile-reading-size); }
+  [data-testid="stDataFrame"], [data-testid="stVegaLiteChart"], [data-testid="stArrowVegaLiteChart"] { max-width: 100%; }
+}
+@media (max-width: 380px) {
+  .features { grid-template-columns: 1fr; }
+  .hero h1 { font-size: 1.7rem; }
+}
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: .01ms !important; transition-duration: .01ms !important; scroll-behavior: auto !important; }
+}
 </style>""", unsafe_allow_html=True)
 
 logo = (BASE / "assets" / "lotus.svg").read_text(encoding="utf-8")
@@ -256,18 +296,20 @@ render_grammar_lab(beta_user)
 render_flashcards(beta_user, widget_id="dashboard")
 
 st.markdown("### ♿ Accessibility & Learning Settings")
+st.caption("Settings are retained while this browser session remains active. Keyboard users can use Tab and Shift+Tab to navigate controls.")
 with st.expander("Customize reading and listening", expanded=False):
-    size_choice = st.select_slider("Text size", options=["Small", "Medium", "Large", "Extra large"], value="Medium")
-    high_contrast = st.checkbox("High contrast", value=False)
-    show_iast = st.checkbox("Show Sanskrit transliteration (IAST)", value=True)
+    size_choice = st.select_slider("Text size", options=["Small", "Medium", "Large", "Extra large"], value="Medium", key="access_text_size")
+    high_contrast = st.checkbox("High contrast", value=False, key="access_high_contrast")
+    show_iast = st.checkbox("Show Sanskrit transliteration (IAST)", value=True, key="access_iast")
     simple_reading = st.checkbox("Simplified reading mode", value=False,
-                                help="Reduce decorative elements and increase reading space.")
-    audio_speed = st.select_slider("Audio speed", options=["Slow (0.75×)", "Normal (1×)", "Fast (1.25×)"], value="Normal (1×)")
+                                help="Reduce decorative elements and increase reading space.", key="access_simple_reading")
+    audio_speed = st.select_slider("Audio speed", options=["Slow (0.75×)", "Normal (1×)", "Fast (1.25×)"], value="Normal (1×)", key="access_audio_speed")
 
 size_px = {"Small": 17, "Medium": 20, "Large": 25, "Extra large": 30}[size_choice]
 rate = {"Slow (0.75×)": 0.75, "Normal (1×)": 1.0, "Fast (1.25×)": 1.25}[audio_speed]
 # Controlled values only: no user text is inserted into CSS.
 st.markdown(f"""<style>
+:root{{--mobile-reading-size:{size_px}px}}
 .translation-result,.comparison-text,.word-detail,.stMarkdown p{{font-size:{size_px}px!important;line-height:1.85!important}}
 textarea{{font-size:{size_px}px!important}}
 .stButton button:focus-visible,[data-baseweb] *:focus-visible,select:focus-visible{{outline:3px solid #a6670c!important;outline-offset:3px!important}}
@@ -306,7 +348,7 @@ with st.expander("Upload an image of Sanskrit text", expanded=False):
                 st.session_state["ocr_upload_digest"] = digest
                 st.session_state.pop("ocr_extracted", None)
             st.caption("Transcription uses one AI request and counts against your daily quota. Images are sent to OpenAI for processing; avoid sensitive material.")
-            if st.button("🔎 Extract Sanskrit text (uses 1 AI request)", key="extract_sanskrit", type="secondary"):
+            if st.button("🔎 Extract Sanskrit text (uses 1 AI request)", key="extract_sanskrit", type="secondary", use_container_width=True):
                 if not api_key():
                     st.error("OPENAI_API_KEY is missing.")
                 else:
@@ -352,7 +394,7 @@ with st.expander("Record Sanskrit speech", expanded=False):
             st.warning("Audio exceeds 4 MB. Please record a shorter clip.")
         else:
             st.caption("Recording ready. Click Transcribe to send it for recognition.")
-            if st.button("🎙️ Transcribe Sanskrit (uses 1 AI request)", key="transcribe_voice"):
+            if st.button("🎙️ Transcribe Sanskrit (uses 1 AI request)", key="transcribe_voice", use_container_width=True):
                 if not api_key():
                     st.error("OPENAI_API_KEY is missing.")
                 else:
@@ -690,7 +732,7 @@ else:
         pdf_words = st.checkbox("Include word-by-word meanings", value=True, key="pdf_words")
         pdf_grammar = st.checkbox("Include grammar explanation", value=True, key="pdf_grammar")
         pdf_sandhi = st.checkbox("Include Sandhi & compounds", value=True, key="pdf_sandhi")
-        if st.button("Prepare PDF study notes", key="prepare_pdf", type="secondary"):
+        if st.button("Prepare PDF study notes", key="prepare_pdf", type="secondary", use_container_width=True):
             try:
                 with st.spinner("Preparing your PDF…"):
                     pdf_bytes = make_study_notes_pdf(

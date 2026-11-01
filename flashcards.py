@@ -62,7 +62,7 @@ def render_flashcards(user, words=None, *, widget_id="review"):
     with st.expander("🗂️ Smart Vocabulary Flashcards", expanded=False):
         st.caption("Save Sanskrit words from Word Explorer, then review them with spaced repetition. No extra AI tokens are used.")
         if words:
-            if st.button("＋ Save these words as flashcards", key=prefix + "save_words"):
+            if st.button("＋ Save these words as flashcards", key=prefix + "save_words", use_container_width=True):
                 try:
                     count = save_words(user, words)
                     st.success(f"Saved {count} new vocabulary cards. Existing cards and review progress were preserved.")
@@ -100,7 +100,7 @@ def render_flashcards(user, words=None, *, widget_id="review"):
         st.caption("Try to recall the meaning before revealing it.")
         revealed = st.session_state.get(prefix + "revealed_id") == current["id"]
         if not revealed:
-            if st.button("Reveal meaning", key=prefix + "reveal"):
+            if st.button("Reveal meaning", key=prefix + "reveal", use_container_width=True):
                 st.session_state[prefix + "revealed_id"] = current["id"]
                 st.rerun()
         else:

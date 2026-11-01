@@ -39,7 +39,7 @@ def render_admin_cost_dashboard(user):
     with st.expander('💰 AI Cost & Admin Dashboard · Admin only',expanded=False):
         st.caption('Private usage data. Estimates are not OpenAI invoices. Costs for audio transcription and legacy rows may be unknown.')
         days=st.selectbox('Reporting window (UTC)',[7,30,90],index=1,key='admin_cost_days')
-        if st.button('Refresh AI usage',key='admin_cost_refresh'): st.rerun()
+        if st.button('Refresh AI usage',key='admin_cost_refresh',use_container_width=True): st.rerun()
         try: rows,truncated=fetch_usage(days)
         except BetaError as exc:
             st.error('Usage unavailable: '+str(exc))
