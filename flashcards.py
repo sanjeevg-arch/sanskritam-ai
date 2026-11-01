@@ -56,11 +56,13 @@ def grade_card(user, card, rating):
                     payload={"p_user_id": uid, "p_card_id": card_id, "p_rating": rating})
 
 
-def render_flashcards(user, words=None):
+def render_flashcards(user, words=None, *, widget_id="review"):
+    """Unique widget keys allow both the dashboard and lesson sections to render."""
+    prefix = "flash_" + widget_id + "_"
     with st.expander("🗂️ Smart Vocabulary Flashcards", expanded=False):
         st.caption("Save Sanskrit words from Word Explorer, then review them with spaced repetition. No extra AI tokens are used.")
         if words:
-            if st.button("＋ Save these words as flashcards", key="flash_save_words"):
+            if st.button("＋ Save these words as flashcards", key=prefix + "save_words"):
                 try:
                     count = save_words(user, words)
                     st.success(f"Saved {count} new vocabulary cards. Existing cards and review progress were preserved.")
@@ -85,21 +87,21 @@ def render_flashcards(user, words=None):
         if not cards:
             st.info("Translate a Sanskrit sentence and select ‘Save these words as flashcards’ to start.")
             return
-        show_all = st.checkbox("Practice all cards (including those not yet due)", key="flash_all")
+        show_all = st.checkbox("Practice all cards (including those not yet due)", key=prefix + "all")
         pool = cards if show_all else pending
         if not pool:
             st.success("You're all caught up! Come back when your next review is due.")
             return
         # Stable selection by card ID prevents jumps when a card is reviewed.
-        selected = st.session_state.get("flash_selected_id")
+        selected = st.session_state.get(prefix + "selected_id")
         current = next((x for x in pool if x["id"] == selected), pool[0])
-        st.session_state["flash_selected_id"] = current["id"]
+        st.session_state[prefix + "selected_id"] = current["id"]
         st.markdown("#### " + str(current["word"]))
         st.caption("Try to recall the meaning before revealing it.")
-        revealed = st.session_state.get("flash_revealed_id") == current["id"]
+        revealed = st.session_state.get(prefix + "revealed_id") == current["id"]
         if not revealed:
-            if st.button("Reveal meaning", key="flash_reveal"):
-                st.session_state["flash_revealed_id"] = current["id"]
+            if st.button("Reveal meaning", key=prefix + "reveal"):
+                st.session_state[prefix + "revealed_id"] = current["id"]
                 st.rerun()
         else:
             st.markdown("**Meaning:** " + str(current["meaning"]))
@@ -111,11 +113,11 @@ def render_flashcards(user, words=None):
             cols = st.columns(3)
             for col, rating in zip(cols, ("Again", "Hard", "Easy")):
                 with col:
-                    if st.button(rating, key="flash_rate_" + rating, use_container_width=True):
+                    if st.button(rating, key=prefix + "rate_" + rating, use_container_width=True):
                         try:
                             grade_card(user, current, rating)
-                            st.session_state.pop("flash_revealed_id", None)
-                            st.session_state.pop("flash_selected_id", None)
+                            st.session_state.pop(prefix + "revealed_id", None)
+                            st.session_state.pop(prefix + "selected_id", None)
                             st.rerun()
                         except (BetaError, ValueError, KeyError, TypeError) as exc:
                             st.error(f"Review could not be saved: {exc}")

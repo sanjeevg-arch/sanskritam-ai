@@ -120,7 +120,7 @@ def api_key():
 def translate(source: str, direction: str, target_languages: list[str]) -> dict:
     schema = {
         "natural_translation": "string", "translations": {lang: "string" for lang in target_languages}, "literal_translation": "string",
-        "words": [{"word": "string", "meaning": "string", "grammar": "string", "note": "string", "lemma": "string", "case": "string", "number": "string", "gender": "string", "part_of_speech": "string"}],
+        "words": [{"word": "string", "meaning": "string", "grammar": "string", "note": "string", "lemma": "string", "root_meaning": "string", "case": "string", "number": "string", "gender": "string", "part_of_speech": "string"}],
         "grammar_explanation": "string", "sandhi_explanation": "string",
         "ambiguities": "string", "learning_tip": "string"
     }
@@ -136,7 +136,7 @@ def translate(source: str, direction: str, target_languages: list[str]) -> dict:
         "For English-to-Sanskrit, words are the Sanskrit words you generate. "
         "Do not fabricate sources. Clearly state uncertainty for ambiguous sandhi, "
         "compounds, morphology, or translations. Do not claim expert verification. "
-        "For each word include lemma (dictionary form or verb root), case, number, gender, and part_of_speech; use not applicable where appropriate. "
+        "For each word include lemma (dictionary form or verb root), root_meaning (the English meaning of the lemma or verbal root, distinct from the inflected word meaning), case, number, gender, and part_of_speech; use not applicable where appropriate. If the root is uncertain, say uncertain rather than inventing it. "
         "Keep each word's note and grammar concise; give up to 12 words. "
         "If input is a fragment, identify it as a fragment."
     )
@@ -242,7 +242,7 @@ with profile_area:
 
 
 render_dashboard(beta_user)
-render_flashcards(beta_user)
+render_flashcards(beta_user, widget_id="dashboard")
 
 st.markdown("### ♿ Accessibility & Learning Settings")
 with st.expander("Customize reading and listening", expanded=False):
@@ -608,13 +608,13 @@ else:
         </script></body></html>""".replace("__WORD__", word_speech).replace("__RATE__", str(rate))
         components.html(word_audio_html, height=60, scrolling=False)
         left, right = st.columns(2)
-        fields = [("Root / lemma", "lemma"), ("Part of speech", "part_of_speech"),
+        fields = [("Root / lemma", "lemma"), ("Root meaning", "root_meaning"), ("Part of speech", "part_of_speech"),
                   ("Case", "case"), ("Number", "number"), ("Gender", "gender"),
                   ("Grammar", "grammar")]
         for idx, (label, key) in enumerate(fields):
             with (left if idx % 2 == 0 else right):
                 st.markdown(f"**{label}**")
-                st.write(str(item.get(key) or "Not specified"))
+                st.write(str(item.get(key) or ("Not available for this saved analysis; translate again to generate it." if key == "root_meaning" else "Not specified")))
         if item.get("note"):
             st.info("In context: " + str(item["note"]))
         reference = lookup(str(item.get("word", "")))
@@ -643,7 +643,7 @@ else:
     st.markdown('<p class="result-intro">Explore how sounds and words join together.</p>', unsafe_allow_html=True)
     st.write(str(data.get("sandhi_explanation") or "No sandhi analysis available."))
 
-    render_flashcards(beta_user, available)
+    render_flashcards(beta_user, available, widget_id="lesson")
 
     render_learning_mode(
         data=data,
