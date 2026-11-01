@@ -39,10 +39,11 @@ def save_words(user, words):
                      "grammar": str(w.get("grammar") or "")[:400]})
     if not rows:
         return 0
-    # ignore-duplicates does not overwrite reviews or previously saved meanings.
-    _request("POST", "/rest/v1/vocabulary_cards?on_conflict=id", service=True,
-             payload=rows, prefer="resolution=ignore-duplicates")
-    return len(rows)
+    # RPC performs INSERT ... ON CONFLICT DO NOTHING on the database side.
+    # Unlike the old REST call, this does not depend on private_beta._request(prefer=...).
+    result = _request("POST", "/rest/v1/rpc/save_vocabulary_words", service=True,
+                      payload={"p_user_id": uid, "p_words": rows})
+    return int(result or 0)
 
 
 def grade_card(user, card, rating):
@@ -62,8 +63,8 @@ def render_flashcards(user, words=None):
             if st.button("＋ Save these words as flashcards", key="flash_save_words"):
                 try:
                     count = save_words(user, words)
-                    st.success(f"Processed {count} vocabulary words. Existing review progress was preserved.")
-                except (BetaError, ValueError, KeyError) as exc:
+                    st.success(f"Saved {count} new vocabulary cards. Existing cards and review progress were preserved.")
+                except (BetaError, ValueError, KeyError, TypeError) as exc:
                     st.error(f"Unable to save cards: {exc}")
         try:
             cards = _cards(user)
@@ -116,6 +117,6 @@ def render_flashcards(user, words=None):
                             st.session_state.pop("flash_revealed_id", None)
                             st.session_state.pop("flash_selected_id", None)
                             st.rerun()
-                        except (BetaError, ValueError, KeyError) as exc:
+                        except (BetaError, ValueError, KeyError, TypeError) as exc:
                             st.error(f"Review could not be saved: {exc}")
         st.caption("Your cards and review schedule are saved privately in Supabase. Meanings are AI-generated; verify uncertain forms.")
