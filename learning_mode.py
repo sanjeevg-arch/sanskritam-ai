@@ -10,6 +10,7 @@ import random
 import re
 
 import streamlit as st
+from learning_dashboard import record_lesson_attempt
 
 
 def build_questions(data: dict, source: str) -> list[dict]:
@@ -105,10 +106,28 @@ def render_learning_mode(data: dict, source: str, direction: str, user_id: str):
     st.markdown("#### Step 4 · Your progress")
     st.metric("Quiz score", f"{correct} / {len(questions)}")
     if len(answers) == len(questions):
+        # Save exactly once per completed attempt. A failed save can be retried.
+        attempt_key = f"dashboard_saved_{fingerprint}_{st.session_state.get('lesson_retry_number', 0)}"
+        if not st.session_state.get(attempt_key):
+            try:
+                record_lesson_attempt(user_id, fingerprint, source, correct, len(questions))
+                st.session_state[attempt_key] = True
+                st.session_state.pop("dashboard_save_error", None)
+                st.toast("Quiz progress saved to your account.")
+            except Exception as exc:
+                # Don't expose credentials or upstream response bodies.
+                st.session_state["dashboard_save_error"] = type(exc).__name__
         st.success(f"Lesson complete! You answered {correct} out of {len(questions)} correctly.")
+        if st.session_state.get(attempt_key):
+            st.caption("✓ Progress saved to Supabase. Open My Learning Dashboard and click Refresh dashboard.")
+        else:
+            st.error("Your score is not yet saved to Supabase. Check that dashboard_setup.sql was run and the app has its Supabase service-role secret.")
+            if st.button("Retry saving progress", key=f"retry_save_{attempt_key}"):
+                st.rerun()
     if st.button("↻ Retry this lesson", key=f"lesson_reset_{fingerprint}"):
         st.session_state["lesson_attempts"] = {}
+        st.session_state["lesson_retry_number"] = st.session_state.get("lesson_retry_number", 0) + 1
         for q in questions:
             st.session_state.pop(f"lesson_choice_{fingerprint}_{q['id']}", None)
         st.rerun()
-    st.caption("Progress is stored only in this browser session; it is not yet saved to your Supabase account.")
+    st.caption("Completed quiz attempts are saved privately to your Supabase account.")
