@@ -14,6 +14,7 @@ from learning_dashboard import render_dashboard
 from flashcards import render_flashcards
 from daily_plan import render_daily_plan
 from grammar_lab import render_grammar_lab
+from sanskrit_beginners import render_sanskrit_beginners
 from corrections import render_corrections
 from admin_cost_dashboard import render_admin_cost_dashboard
 from history import save_translation, render_history
@@ -287,6 +288,7 @@ with profile_area:
 render_dashboard(beta_user)
 render_admin_cost_dashboard(beta_user)
 render_daily_plan(beta_user)
+render_sanskrit_beginners(beta_user)
 render_grammar_lab(beta_user)
 render_flashcards(beta_user, widget_id="dashboard")
 
