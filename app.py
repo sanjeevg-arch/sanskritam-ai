@@ -270,21 +270,18 @@ def transcribe_sanskrit_audio(audio_bytes: bytes) -> tuple[str, int]:
 # Accessibility controls apply to the results without triggering a new API request.
 beta_user = auth_gate(show_heading=False)
 
-# Persistent navigation row, directly below the brand header on every signed-in page.
-# A real Streamlit button (not an HTML link) preserves the authenticated session.
+# Account controls sit directly beneath the brand header on every signed-in page.
+# Navigation requests use a separate key so widgets are never mutated after creation.
 profile_email = str(beta_user.get("email", ""))
 profile_label = profile_email.split("@", 1)[0][:20] or "Account"
-header_home, header_title, header_account = st.columns([1, 7, 3], vertical_alignment="center")
-with header_home:
-    if st.button("🏠", key="global_home_icon", help="Go to Home", use_container_width=True):
-        st.session_state["pending_navigation"] = "🏠 Home"
-        st.rerun()
-with header_title:
-    st.markdown("## Sanskritam AI · Private Beta")
+header_space, header_account = st.columns([8, 3], vertical_alignment="center")
 with header_account:
     with st.popover("👤 " + profile_label, use_container_width=True):
         st.markdown("**Signed in as**")
         st.caption(profile_email)
+        if st.button("🏠 Home", key="profile_home", use_container_width=True):
+            st.session_state["pending_navigation"] = "🏠 Home"
+            st.rerun()
         if st.button("♿ Accessibility & Learning Settings", key="profile_accessibility", use_container_width=True):
             st.session_state["pending_navigation"] = "⚙️ Settings"
             st.rerun()
@@ -360,6 +357,9 @@ if page == "🏠 Home":
         st.rerun()
     with st.expander("📊 Detailed learning dashboard", expanded=False):
         render_dashboard(beta_user)
+    # The administrator-only dashboard must remain reachable from Home.
+    # Its own is_admin guard prevents non-admin access to usage records.
+    render_admin_cost_dashboard(beta_user)
     st.stop()
 
 if page == "📚 Learn":
@@ -376,7 +376,6 @@ if page == "🧠 Practice":
     render_flashcards(beta_user, widget_id="dashboard")
     with st.expander("📊 Learning progress", expanded=False):
         render_dashboard(beta_user)
-    render_admin_cost_dashboard(beta_user)  # Existing administrator guard remains in place.
     st.stop()
 
 st.header("Translate & Explore")
