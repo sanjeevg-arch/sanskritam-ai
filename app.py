@@ -38,7 +38,7 @@ st.set_page_config(page_title="Sanskritam AI | Translate & Learn", page_icon="�
 st.markdown("""<style>
 @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Noto+Sans+Devanagari:wght@400;500;600;700&family=Playfair+Display:wght@500;600;700&display=swap');
 :root{--green:#154832;--gold:#9b6014;--blue:#174e91;--purple:#6a267d;--ink:#25372f}
-.stApp{background:linear-gradient(165deg,#fff6e4,#fffdf8 42%,#f0f6f2);color:var(--ink);font-family:'DM Sans',sans-serif}
+.stApp{background:#ffffff;color:var(--ink);font-family:'DM Sans',sans-serif}
 .block-container{max-width:1180px;padding-top:1rem;padding-bottom:3rem}
 header[data-testid="stHeader"]{background:transparent}
 h1,h2,h3{font-family:'Playfair Display',Georgia,serif!important;color:var(--green)!important}
@@ -123,11 +123,13 @@ html { scroll-padding-top: 1rem; }
 </style>""", unsafe_allow_html=True)
 
 logo = (BASE / "assets" / "lotus.svg").read_text(encoding="utf-8")
-header_logo, header_name = st.columns([1, 11], vertical_alignment="center")
+header_logo, header_name, header_profile = st.columns([1, 8, 3], vertical_alignment="center")
 with header_logo:
     st.image(str(BASE / "assets" / "lotus.svg"), width=70)
 with header_name:
     st.markdown('<div class="brand">संस्कृतम् AI · Sanskritam AI<small>DISCOVER · TRANSLATE · UNDERSTAND</small></div>', unsafe_allow_html=True)
+with header_profile:
+    account_header_slot = st.empty()
 st.markdown('<section class="hero"><div class="kicker">ANCIENT WISDOM · MODERN INTELLIGENCE</div><h1>Discover the Beauty of Sanskrit</h1><p>Translate across languages, explore each word, and learn the grammar behind the meaning.</p></section>', unsafe_allow_html=True)
 
 
@@ -271,31 +273,35 @@ def transcribe_sanskrit_audio(audio_bytes: bytes) -> tuple[str, int]:
 # Accessibility controls apply to the results without triggering a new API request.
 beta_user = auth_gate()
 
-# Authenticated account controls live in the page header, not the sidebar.
-profile_spacer, profile_area = st.columns([5, 2], vertical_alignment="center")
-with profile_area:
-    profile_email = str(beta_user.get("email", ""))
-    profile_label = profile_email.split("@", 1)[0][:20] or "Account"
+# Render account actions in the header slot reserved above the hero.
+# Streamlit containers support filling a placeholder later in the script.
+profile_email = str(beta_user.get("email", ""))
+profile_label = profile_email.split("@", 1)[0][:20] or "Account"
+with account_header_slot.container():
     with st.popover("👤 " + profile_label, use_container_width=True):
         st.markdown("**Signed in as**")
         st.caption(profile_email)
+        if st.button("♿ Accessibility & Learning Settings", key="profile_accessibility", use_container_width=True):
+            st.session_state["pending_navigation"] = "⚙️ Settings"
+            st.rerun()
         if st.button("↪ Sign out", key="profile_sign_out", use_container_width=True):
-            sign_out(st.session_state.get('beta_access_token'))
+            sign_out(st.session_state.get("beta_access_token"))
             clear_account_session()
             st.rerun()
 
-
-# Feature sections are routed below the shared accessibility controls.
-
-st.markdown("### ♿ Accessibility & Learning Settings")
-st.caption("Settings are retained while this browser session remains active. Keyboard users can use Tab and Shift+Tab to navigate controls.")
-with st.expander("Customize reading and listening", expanded=False):
-    size_choice = st.select_slider("Text size", options=["Small", "Medium", "Large", "Extra large"], value="Medium", key="access_text_size")
-    high_contrast = st.checkbox("High contrast", value=False, key="access_high_contrast")
-    show_iast = st.checkbox("Show Sanskrit transliteration (IAST)", value=True, key="access_iast")
-    simple_reading = st.checkbox("Simplified reading mode", value=False,
-                                help="Reduce decorative elements and increase reading space.", key="access_simple_reading")
-    audio_speed = st.select_slider("Audio speed", options=["Slow (0.75×)", "Normal (1×)", "Fast (1.25×)"], value="Normal (1×)", key="access_audio_speed")
+# Preferences remain available on every page, but their widgets are only
+# instantiated on the dedicated Settings page.
+size_options = ["Small", "Medium", "Large", "Extra large"]
+speed_options = ["Slow (0.75×)", "Normal (1×)", "Fast (1.25×)"]
+size_choice = st.session_state.get("access_text_size", "Medium")
+if size_choice not in size_options:
+    size_choice = "Medium"
+high_contrast = bool(st.session_state.get("access_high_contrast", False))
+show_iast = bool(st.session_state.get("access_iast", True))
+simple_reading = bool(st.session_state.get("access_simple_reading", False))
+audio_speed = st.session_state.get("access_audio_speed", "Normal (1×)")
+if audio_speed not in speed_options:
+    audio_speed = "Normal (1×)"
 
 size_px = {"Small": 17, "Medium": 20, "Large": 25, "Extra large": 30}[size_choice]
 rate = {"Slow (0.75×)": 0.75, "Normal (1×)": 1.0, "Fast (1.25×)": 1.25}[audio_speed]
@@ -319,7 +325,7 @@ if "pending_navigation" in st.session_state:
     st.session_state["main_navigation"] = st.session_state.pop("pending_navigation")
 
 page = st.session_state.get("main_navigation", "🏠 Home")
-if page not in ("🏠 Home", "📚 Learn", "🌐 Translate", "🧠 Practice"):
+if page not in ("🏠 Home", "📚 Learn", "🌐 Translate", "🧠 Practice", "⚙️ Settings"):
     page = "🏠 Home"
 
 # A return path is necessary once the top navigation is removed.
@@ -327,6 +333,25 @@ if page != "🏠 Home":
     if st.button("← Back to Home", key="back_to_home"):
         st.session_state["pending_navigation"] = "🏠 Home"
         st.rerun()
+
+if page == "⚙️ Settings":
+    for pref_key, default in {
+        "access_text_size": "Medium", "access_high_contrast": False,
+        "access_iast": True, "access_simple_reading": False,
+        "access_audio_speed": "Normal (1×)",
+    }.items():
+        st.session_state.setdefault(pref_key, default)
+    st.header("♿ Accessibility & Learning Settings")
+    st.caption("Adjust reading and listening preferences. Changes apply across the app during this browser session.")
+    with st.container(border=True):
+        st.select_slider("Text size", options=size_options, key="access_text_size")
+        st.checkbox("High contrast", key="access_high_contrast")
+        st.checkbox("Show Sanskrit transliteration (IAST)", key="access_iast")
+        st.checkbox("Simplified reading mode", key="access_simple_reading",
+                    help="Reduce decorative elements and increase reading space.")
+        st.select_slider("Audio speed", options=speed_options, key="access_audio_speed")
+    st.info("Settings are retained while this browser session remains active.")
+    st.stop()
 
 if page == "🏠 Home":
     destination = render_home(beta_user)
