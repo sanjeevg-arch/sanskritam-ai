@@ -48,14 +48,21 @@ def render_home(user):
                 )
             return '📚 Learn'
 
-    first, second = st.columns(2)
-    with first:
+    # Three equal shortcuts on the home page: Learn, Translate, Practice.
+    learn_col, translate_col, practice_col = st.columns(3)
+    with learn_col:
+        with st.container(border=True):
+            st.markdown("#### 📚 Learn")
+            st.caption("Follow beginner lessons and your daily learning plan.")
+            if st.button("Open Learning", use_container_width=True, key="home_learn"):
+                return '📚 Learn'
+    with translate_col:
         with st.container(border=True):
             st.markdown("#### 🌐 Translate")
             st.caption("Explore Sanskrit sentences, roots, and grammar.")
             if st.button("Open Translation", use_container_width=True, key="home_translate"):
                 return '🌐 Translate'
-    with second:
+    with practice_col:
         with st.container(border=True):
             st.markdown("#### 🧠 Practice")
             st.caption("Review flashcards and strengthen grammar.")
