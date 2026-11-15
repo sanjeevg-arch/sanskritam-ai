@@ -285,12 +285,7 @@ with profile_area:
             st.rerun()
 
 
-render_dashboard(beta_user)
-render_admin_cost_dashboard(beta_user)
-render_daily_plan(beta_user)
-render_sanskrit_beginners(beta_user)
-render_grammar_lab(beta_user)
-render_flashcards(beta_user, widget_id="dashboard")
+# Feature sections are routed below the shared accessibility controls.
 
 st.markdown("### ♿ Accessibility & Learning Settings")
 st.caption("Settings are retained while this browser session remains active. Keyboard users can use Tab and Shift+Tab to navigate controls.")
@@ -313,6 +308,48 @@ textarea{{font-size:{size_px}px!important}}
 {'.stApp{background:#fff!important;color:#111!important} .translation-result,.word-detail,.comparison-text{background:#fff!important;color:#111!important;border:2px solid #111!important} .result-heading{color:#111!important;border-color:#111!important;background:#fff!important} .stMarkdown p,.stMarkdown span{color:#111!important}' if high_contrast else ''}
 {'.hero,.features{display:none!important} .block-container{max-width:1000px!important}' if simple_reading else ''}
 </style>""", unsafe_allow_html=True)
+
+
+# v2.8.1: one primary destination per page, while keeping existing tools intact.
+from home_ux import render_home, next_beginner_lesson
+
+st.markdown("### Explore Sanskritam AI")
+page = st.radio(
+    "Main navigation",
+    ["🏠 Home", "📚 Learn", "🌐 Translate", "🧠 Practice"],
+    horizontal=True,
+    key="main_navigation",
+    label_visibility="collapsed",
+)
+
+if page == "🏠 Home":
+    destination = render_home(beta_user)
+    if destination:
+        st.session_state["main_navigation"] = destination
+        st.rerun()
+    with st.expander("📊 Detailed learning dashboard", expanded=False):
+        render_dashboard(beta_user)
+    st.stop()
+
+if page == "📚 Learn":
+    st.header("Learn Sanskrit")
+    st.caption("Continue your Sanskrit for Beginners journey, or follow your daily study plan.")
+    render_sanskrit_beginners(beta_user)
+    render_daily_plan(beta_user)
+    st.stop()
+
+if page == "🧠 Practice":
+    st.header("Practice & Review")
+    st.caption("Strengthen grammar and review words you've learned.")
+    render_grammar_lab(beta_user)
+    render_flashcards(beta_user, widget_id="dashboard")
+    with st.expander("📊 Learning progress", expanded=False):
+        render_dashboard(beta_user)
+    render_admin_cost_dashboard(beta_user)  # Existing administrator guard remains in place.
+    st.stop()
+
+st.header("Translate & Explore")
+st.caption("Translate text, capture Sanskrit from an image or voice, and explore grammar.")
 
 
 def iast(text: str) -> str:
