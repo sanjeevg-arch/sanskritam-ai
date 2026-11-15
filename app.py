@@ -291,25 +291,28 @@ with header_account:
             clear_account_session()
             st.rerun()
 
-# Persistent left navigation on all signed-in pages.
-# Use pending_navigation rather than mutating a widget key after creation.
-with st.sidebar:
-    st.markdown("### 🪷 Sanskritam AI")
-    st.caption("Quick navigation")
-    if st.button("🏠 Home", key="sidebar_home", use_container_width=True):
-        st.session_state["pending_navigation"] = "🏠 Home"
-        st.rerun()
-    if st.button("♿ Accessibility & Learning Settings", key="sidebar_settings", use_container_width=True):
-        st.session_state["pending_navigation"] = "⚙️ Settings"
-        st.rerun()
-    st.divider()
-    if st.button("📊 My Learning Dashboard", key="sidebar_learning_dashboard", use_container_width=True):
-        st.session_state["pending_navigation"] = "📊 My Learning Dashboard"
-        st.rerun()
-    if is_admin(beta_user):
-        if st.button("💰 AI Cost & Admin Dashboard", key="sidebar_admin_dashboard", use_container_width=True):
-            st.session_state["pending_navigation"] = "💰 AI Cost & Admin Dashboard"
-            st.rerun()
+# Collapsible navigation: Streamlit's native popover provides a menu without
+# depending on unsupported JavaScript or internal sidebar DOM selectors.
+# A selection sets a pending destination and reruns the app, closing the menu.
+with st.container(key="compact_navigation_toolbar"):
+    nav_left, nav_rest = st.columns([2, 9], vertical_alignment="center")
+    with nav_left:
+        with st.popover("☰ Menu", use_container_width=True):
+            st.caption("Quick navigation")
+            if st.button("🏠 Home", key="drawer_home", use_container_width=True):
+                st.session_state["pending_navigation"] = "🏠 Home"
+                st.rerun()
+            if st.button("♿ Accessibility & Learning Settings", key="drawer_settings", use_container_width=True):
+                st.session_state["pending_navigation"] = "⚙️ Settings"
+                st.rerun()
+            st.divider()
+            if st.button("📊 My Learning Dashboard", key="drawer_learning_dashboard", use_container_width=True):
+                st.session_state["pending_navigation"] = "📊 My Learning Dashboard"
+                st.rerun()
+            if is_admin(beta_user):
+                if st.button("💰 AI Cost & Admin Dashboard", key="drawer_admin_dashboard", use_container_width=True):
+                    st.session_state["pending_navigation"] = "💰 AI Cost & Admin Dashboard"
+                    st.rerun()
 
 st.markdown('<section class="hero"><div class="kicker">ANCIENT WISDOM · MODERN INTELLIGENCE</div><h1>Discover the Beauty of Sanskrit</h1><p>Translate across languages, explore each word, and learn the grammar behind the meaning.</p></section>', unsafe_allow_html=True)
 
