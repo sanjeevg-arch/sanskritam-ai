@@ -327,6 +327,7 @@ textarea{{font-size:{size_px}px!important}}
 
 # v2.8.1: one primary destination per page, while keeping existing tools intact.
 from home_ux import render_home, next_beginner_lesson
+from unified_learning import render_unified_learning
 
 # Navigation is controlled by Home page buttons, not a radio widget.
 # Keep the selected destination in session state across Streamlit reruns.
@@ -361,6 +362,7 @@ if page == "🏠 Home":
     if destination:
         st.session_state["pending_navigation"] = destination
         st.rerun()
+    render_unified_learning(beta_user)
     render_dashboard(beta_user)
     # The administrator-only dashboard must remain reachable from Home.
     # Its own is_admin guard prevents non-admin access to usage records.
@@ -379,8 +381,9 @@ if page == "🧠 Practice":
     st.caption("Strengthen grammar and review words you've learned.")
     render_grammar_lab(beta_user)
     render_flashcards(beta_user, widget_id="dashboard")
-    with st.expander("📊 Learning progress", expanded=False):
-        render_dashboard(beta_user)
+    with st.expander("📈 Unified learning progress", expanded=False):
+        render_unified_learning(beta_user)
+    render_dashboard(beta_user)
     st.stop()
 
 st.header("Translate & Explore")
