@@ -313,19 +313,20 @@ textarea{{font-size:{size_px}px!important}}
 # v2.8.1: one primary destination per page, while keeping existing tools intact.
 from home_ux import render_home, next_beginner_lesson
 
-# Navigation requests are applied before the radio widget is instantiated.
-# Streamlit prohibits modifying a widget's session-state key later in the same run.
+# Navigation is controlled by Home page buttons, not a radio widget.
+# Keep the selected destination in session state across Streamlit reruns.
 if "pending_navigation" in st.session_state:
     st.session_state["main_navigation"] = st.session_state.pop("pending_navigation")
 
-st.markdown("### Explore Sanskritam AI")
-page = st.radio(
-    "Main navigation",
-    ["🏠 Home", "📚 Learn", "🌐 Translate", "🧠 Practice"],
-    horizontal=True,
-    key="main_navigation",
-    label_visibility="collapsed",
-)
+page = st.session_state.get("main_navigation", "🏠 Home")
+if page not in ("🏠 Home", "📚 Learn", "🌐 Translate", "🧠 Practice"):
+    page = "🏠 Home"
+
+# A return path is necessary once the top navigation is removed.
+if page != "🏠 Home":
+    if st.button("← Back to Home", key="back_to_home"):
+        st.session_state["pending_navigation"] = "🏠 Home"
+        st.rerun()
 
 if page == "🏠 Home":
     destination = render_home(beta_user)

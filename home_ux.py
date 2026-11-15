@@ -31,23 +31,6 @@ def render_home(user):
     start_at = 7 if start_level == 'I can already read Devanagari' else 1
     lesson = next_beginner_lesson(progress, LESSONS, starts_at=start_at)
 
-    with st.container(border=True):
-        st.subheader("Your next lesson")
-        if lesson:
-            st.markdown(f"**Lesson {lesson['number']}: {lesson['title']}**")
-            st.caption("Sanskrit for Beginners · About 5–10 minutes")
-        else:
-            st.success("You've completed the lessons in your selected learning path!")
-        st.progress(completed / len(LESSONS), text=f"{completed} of {len(LESSONS)} lessons completed")
-        if st.button("📚 Continue Learning", type="primary", use_container_width=True, key="home_continue"):
-            if lesson:
-                # Existing lesson selectbox uses this exact label format.
-                st.session_state['beginner_lesson_selection'] = (
-                    f"{lesson['number']:02}. {lesson['title']} "
-                    f"{'✓' if progress.get(lesson['id'], {}).get('completed_at') else ''}"
-                )
-            return '📚 Learn'
-
     # Three equal shortcuts on the home page: Learn, Translate, Practice.
     learn_col, translate_col, practice_col = st.columns(3)
     with learn_col:
@@ -68,6 +51,23 @@ def render_home(user):
             st.caption("Review flashcards and strengthen grammar.")
             if st.button("Open Practice", use_container_width=True, key="home_practice"):
                 return '🧠 Practice'
+
+    with st.container(border=True):
+        st.subheader("Your next lesson")
+        if lesson:
+            st.markdown(f"**Lesson {lesson['number']}: {lesson['title']}**")
+            st.caption("Sanskrit for Beginners · About 5–10 minutes")
+        else:
+            st.success("You've completed the lessons in your selected learning path!")
+        st.progress(completed / len(LESSONS), text=f"{completed} of {len(LESSONS)} lessons completed")
+        if st.button("📚 Continue Learning", type="primary", use_container_width=True, key="home_continue"):
+            if lesson:
+                # Existing lesson selectbox uses this exact label format.
+                st.session_state['beginner_lesson_selection'] = (
+                    f"{lesson['number']:02}. {lesson['title']} "
+                    f"{'✓' if progress.get(lesson['id'], {}).get('completed_at') else ''}"
+                )
+            return '📚 Learn'
 
     st.markdown("#### Your progress")
     a, b = st.columns(2)
