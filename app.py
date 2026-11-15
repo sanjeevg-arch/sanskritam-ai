@@ -285,16 +285,22 @@ with header_account:
     with st.popover("👤 " + profile_label, use_container_width=True):
         st.markdown("**Signed in as**")
         st.caption(profile_email)
-        if st.button("🏠 Home", key="profile_home", use_container_width=True):
-            st.session_state["pending_navigation"] = "🏠 Home"
-            st.rerun()
-        if st.button("♿ Accessibility & Learning Settings", key="profile_accessibility", use_container_width=True):
-            st.session_state["pending_navigation"] = "⚙️ Settings"
-            st.rerun()
         if st.button("↪ Sign out", key="profile_sign_out", use_container_width=True):
             sign_out(st.session_state.get("beta_access_token"))
             clear_account_session()
             st.rerun()
+
+# Persistent left navigation on all signed-in pages.
+# Use pending_navigation rather than mutating a widget key after creation.
+with st.sidebar:
+    st.markdown("### 🪷 Sanskritam AI")
+    st.caption("Quick navigation")
+    if st.button("🏠 Home", key="sidebar_home", use_container_width=True):
+        st.session_state["pending_navigation"] = "🏠 Home"
+        st.rerun()
+    if st.button("♿ Accessibility & Learning Settings", key="sidebar_settings", use_container_width=True):
+        st.session_state["pending_navigation"] = "⚙️ Settings"
+        st.rerun()
 
 st.markdown('<section class="hero"><div class="kicker">ANCIENT WISDOM · MODERN INTELLIGENCE</div><h1>Discover the Beauty of Sanskrit</h1><p>Translate across languages, explore each word, and learn the grammar behind the meaning.</p></section>', unsafe_allow_html=True)
 
