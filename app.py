@@ -17,6 +17,7 @@ from grammar_lab import render_grammar_lab
 from sanskrit_beginners import render_sanskrit_beginners
 from corrections import render_corrections
 from admin_cost_dashboard import render_admin_cost_dashboard
+from corrections import is_admin
 from history import save_translation, render_history
 from study_notes import make_study_notes_pdf
 
@@ -301,6 +302,14 @@ with st.sidebar:
     if st.button("♿ Accessibility & Learning Settings", key="sidebar_settings", use_container_width=True):
         st.session_state["pending_navigation"] = "⚙️ Settings"
         st.rerun()
+    st.divider()
+    if st.button("📊 My Learning Dashboard", key="sidebar_learning_dashboard", use_container_width=True):
+        st.session_state["pending_navigation"] = "📊 My Learning Dashboard"
+        st.rerun()
+    if is_admin(beta_user):
+        if st.button("💰 AI Cost & Admin Dashboard", key="sidebar_admin_dashboard", use_container_width=True):
+            st.session_state["pending_navigation"] = "💰 AI Cost & Admin Dashboard"
+            st.rerun()
 
 st.markdown('<section class="hero"><div class="kicker">ANCIENT WISDOM · MODERN INTELLIGENCE</div><h1>Discover the Beauty of Sanskrit</h1><p>Translate across languages, explore each word, and learn the grammar behind the meaning.</p></section>', unsafe_allow_html=True)
 
@@ -341,8 +350,12 @@ if "pending_navigation" in st.session_state:
     st.session_state["main_navigation"] = st.session_state.pop("pending_navigation")
 
 page = st.session_state.get("main_navigation", "🏠 Home")
-if page not in ("🏠 Home", "📚 Learn", "🌐 Translate", "🧠 Practice", "⚙️ Settings"):
+if page not in ("🏠 Home", "📚 Learn", "🌐 Translate", "🧠 Practice", "⚙️ Settings", "📊 My Learning Dashboard", "💰 AI Cost & Admin Dashboard"):
     page = "🏠 Home"
+# Never permit a stale or manually set session destination to bypass the admin guard.
+if page == "💰 AI Cost & Admin Dashboard" and not is_admin(beta_user):
+    page = "🏠 Home"
+    st.session_state["main_navigation"] = page
 
 if page == "⚙️ Settings":
     for pref_key, default in {
@@ -369,9 +382,19 @@ if page == "🏠 Home":
         st.session_state["pending_navigation"] = destination
         st.rerun()
     render_unified_learning(beta_user)
+    st.stop()
+
+if page == "📊 My Learning Dashboard":
+    st.header("📊 My Learning Dashboard")
     render_dashboard(beta_user)
-    # The administrator-only dashboard must remain reachable from Home.
-    # Its own is_admin guard prevents non-admin access to usage records.
+    st.stop()
+
+if page == "💰 AI Cost & Admin Dashboard":
+    # Defense in depth: recheck authorization at the destination.
+    if not is_admin(beta_user):
+        st.error("Administrator access required.")
+        st.stop()
+    st.header("💰 AI Cost & Admin Dashboard")
     render_admin_cost_dashboard(beta_user)
     st.stop()
 
