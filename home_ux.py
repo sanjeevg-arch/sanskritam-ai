@@ -73,5 +73,4 @@ def render_home(user):
     a, b = st.columns(2)
     a.metric("Lessons completed", f"{completed}/{len(LESSONS)}" if progress_available else "Unavailable")
     b.metric("Lessons remaining", str(len(LESSONS) - completed) if progress_available else "Unavailable")
-    st.caption("Your detailed learning dashboard is available below.")
     return None

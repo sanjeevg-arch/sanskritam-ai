@@ -81,6 +81,11 @@ div[data-testid="stButton"] button[kind="secondary"]:hover{border-color:#267344;
 @media(max-width:650px){.hero{padding:1.25rem}.block-container{padding-left:1rem;padding-right:1rem}}
 @media(prefers-reduced-motion:reduce){*,*:before,*:after{animation:none!important;transition:none!important}}
 
+/* Balanced account controls directly below the brand header. */
+.st-key-account_toolbar { padding-top: .8rem; padding-bottom: .8rem; }
+.st-key-account_toolbar [data-testid="stPopover"] > button { min-height: 44px; }
+.hero { margin-top: .4rem; }
+
 /* v2.7 mobile-first and accessible interaction layer. */
 html { scroll-padding-top: 1rem; }
 .stApp, .block-container { min-width: 0; }
@@ -274,7 +279,8 @@ beta_user = auth_gate(show_heading=False)
 # Navigation requests use a separate key so widgets are never mutated after creation.
 profile_email = str(beta_user.get("email", ""))
 profile_label = profile_email.split("@", 1)[0][:20] or "Account"
-header_space, header_account = st.columns([8, 3], vertical_alignment="center")
+with st.container(key="account_toolbar"):
+    header_space, header_account = st.columns([8, 3], vertical_alignment="center")
 with header_account:
     with st.popover("👤 " + profile_label, use_container_width=True):
         st.markdown("**Signed in as**")
@@ -355,8 +361,7 @@ if page == "🏠 Home":
     if destination:
         st.session_state["pending_navigation"] = destination
         st.rerun()
-    with st.expander("📊 Detailed learning dashboard", expanded=False):
-        render_dashboard(beta_user)
+    render_dashboard(beta_user)
     # The administrator-only dashboard must remain reachable from Home.
     # Its own is_admin guard prevents non-admin access to usage records.
     render_admin_cost_dashboard(beta_user)
