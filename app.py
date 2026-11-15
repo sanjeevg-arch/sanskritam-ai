@@ -313,6 +313,11 @@ textarea{{font-size:{size_px}px!important}}
 # v2.8.1: one primary destination per page, while keeping existing tools intact.
 from home_ux import render_home, next_beginner_lesson
 
+# Navigation requests are applied before the radio widget is instantiated.
+# Streamlit prohibits modifying a widget's session-state key later in the same run.
+if "pending_navigation" in st.session_state:
+    st.session_state["main_navigation"] = st.session_state.pop("pending_navigation")
+
 st.markdown("### Explore Sanskritam AI")
 page = st.radio(
     "Main navigation",
@@ -325,7 +330,7 @@ page = st.radio(
 if page == "🏠 Home":
     destination = render_home(beta_user)
     if destination:
-        st.session_state["main_navigation"] = destination
+        st.session_state["pending_navigation"] = destination
         st.rerun()
     with st.expander("📊 Detailed learning dashboard", expanded=False):
         render_dashboard(beta_user)
