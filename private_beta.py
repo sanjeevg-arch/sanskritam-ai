@@ -128,8 +128,9 @@ def clear_account_session():
         del st.session_state[key]
 
 
-def auth_gate():
-    st.markdown('## 🔒 Sanskritam AI · Private Beta')
+def auth_gate(show_heading=True):
+    if show_heading:
+        st.markdown('## 🔒 Sanskritam AI · Private Beta')
     token = st.session_state.get('beta_access_token')
     if token:
         try:
@@ -140,6 +141,8 @@ def auth_gate():
         except BetaError:
             clear_account_session()
             st.warning('Please sign in again to continue.')
+    if not show_heading:
+        st.markdown('## Sanskritam AI · Private Beta')
     st.info('Access is limited to invited testers. Sign in using your approved email address.')
     email = st.text_input('Invited email address', key='beta_email').strip().lower()
     if st.button('Email me a sign-in code', type='primary'):

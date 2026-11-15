@@ -123,14 +123,11 @@ html { scroll-padding-top: 1rem; }
 </style>""", unsafe_allow_html=True)
 
 logo = (BASE / "assets" / "lotus.svg").read_text(encoding="utf-8")
-header_logo, header_name, header_profile = st.columns([1, 8, 3], vertical_alignment="center")
+header_logo, header_name = st.columns([1, 11], vertical_alignment="center")
 with header_logo:
     st.image(str(BASE / "assets" / "lotus.svg"), width=70)
 with header_name:
     st.markdown('<div class="brand">संस्कृतम् AI · Sanskritam AI<small>DISCOVER · TRANSLATE · UNDERSTAND</small></div>', unsafe_allow_html=True)
-with header_profile:
-    account_header_slot = st.empty()
-st.markdown('<section class="hero"><div class="kicker">ANCIENT WISDOM · MODERN INTELLIGENCE</div><h1>Discover the Beauty of Sanskrit</h1><p>Translate across languages, explore each word, and learn the grammar behind the meaning.</p></section>', unsafe_allow_html=True)
 
 
 LANGUAGES = {
@@ -271,13 +268,20 @@ def transcribe_sanskrit_audio(audio_bytes: bytes) -> tuple[str, int]:
 
 
 # Accessibility controls apply to the results without triggering a new API request.
-beta_user = auth_gate()
+beta_user = auth_gate(show_heading=False)
 
-# Render account actions in the header slot reserved above the hero.
-# Streamlit containers support filling a placeholder later in the script.
+# Persistent navigation row, directly below the brand header on every signed-in page.
+# A real Streamlit button (not an HTML link) preserves the authenticated session.
 profile_email = str(beta_user.get("email", ""))
 profile_label = profile_email.split("@", 1)[0][:20] or "Account"
-with account_header_slot.container():
+header_home, header_title, header_account = st.columns([1, 7, 3], vertical_alignment="center")
+with header_home:
+    if st.button("🏠", key="global_home_icon", help="Go to Home", use_container_width=True):
+        st.session_state["pending_navigation"] = "🏠 Home"
+        st.rerun()
+with header_title:
+    st.markdown("## Sanskritam AI · Private Beta")
+with header_account:
     with st.popover("👤 " + profile_label, use_container_width=True):
         st.markdown("**Signed in as**")
         st.caption(profile_email)
@@ -288,6 +292,8 @@ with account_header_slot.container():
             sign_out(st.session_state.get("beta_access_token"))
             clear_account_session()
             st.rerun()
+
+st.markdown('<section class="hero"><div class="kicker">ANCIENT WISDOM · MODERN INTELLIGENCE</div><h1>Discover the Beauty of Sanskrit</h1><p>Translate across languages, explore each word, and learn the grammar behind the meaning.</p></section>', unsafe_allow_html=True)
 
 # Preferences remain available on every page, but their widgets are only
 # instantiated on the dedicated Settings page.
@@ -327,12 +333,6 @@ if "pending_navigation" in st.session_state:
 page = st.session_state.get("main_navigation", "🏠 Home")
 if page not in ("🏠 Home", "📚 Learn", "🌐 Translate", "🧠 Practice", "⚙️ Settings"):
     page = "🏠 Home"
-
-# A return path is necessary once the top navigation is removed.
-if page != "🏠 Home":
-    if st.button("← Back to Home", key="back_to_home"):
-        st.session_state["pending_navigation"] = "🏠 Home"
-        st.rerun()
 
 if page == "⚙️ Settings":
     for pref_key, default in {
