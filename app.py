@@ -299,8 +299,17 @@ with st.container(key="compact_navigation_toolbar"):
     with nav_left:
         with st.popover("☰ Menu", use_container_width=True):
             st.caption("Quick navigation")
-            if st.button("🏠 Home", key="drawer_home", use_container_width=True):
-                st.session_state["pending_navigation"] = "🏠 Home"
+            if st.button("🏠 Home · Translate", key="drawer_home", use_container_width=True):
+                st.session_state["pending_navigation"] = "🌐 Translate"
+                st.rerun()
+            if st.button("📚 Learn", key="drawer_learn", use_container_width=True):
+                st.session_state["pending_navigation"] = "📚 Learn"
+                st.rerun()
+            if st.button("🧠 Practice", key="drawer_practice", use_container_width=True):
+                st.session_state["pending_navigation"] = "🧠 Practice"
+                st.rerun()
+            if st.button("🪷 Learning Journey", key="drawer_learning_journey", use_container_width=True):
+                st.session_state["pending_navigation"] = "🪷 Learning Journey"
                 st.rerun()
             if st.button("♿ Accessibility & Learning Settings", key="drawer_settings", use_container_width=True):
                 st.session_state["pending_navigation"] = "⚙️ Settings"
@@ -352,12 +361,17 @@ from unified_learning import render_unified_learning
 if "pending_navigation" in st.session_state:
     st.session_state["main_navigation"] = st.session_state.pop("pending_navigation")
 
-page = st.session_state.get("main_navigation", "🏠 Home")
-if page not in ("🏠 Home", "📚 Learn", "🌐 Translate", "🧠 Practice", "⚙️ Settings", "📊 My Learning Dashboard", "💰 AI Cost & Admin Dashboard"):
-    page = "🏠 Home"
+page = st.session_state.get("main_navigation", "🌐 Translate")
+if page not in ("🏠 Home", "📚 Learn", "🌐 Translate", "🧠 Practice", "🪷 Learning Journey", "⚙️ Settings", "📊 My Learning Dashboard", "💰 AI Cost & Admin Dashboard"):
+    page = "🌐 Translate"
 # Never permit a stale or manually set session destination to bypass the admin guard.
 if page == "💰 AI Cost & Admin Dashboard" and not is_admin(beta_user):
-    page = "🏠 Home"
+    page = "🌐 Translate"
+    st.session_state["main_navigation"] = page
+
+# Redirect legacy Home destination to Translate.
+if page == "🏠 Home":
+    page = "🌐 Translate"
     st.session_state["main_navigation"] = page
 
 if page == "⚙️ Settings":
@@ -379,7 +393,7 @@ if page == "⚙️ Settings":
     st.info("Settings are retained while this browser session remains active.")
     st.stop()
 
-if page == "🏠 Home":
+if page == "🪷 Learning Journey":
     destination = render_home(beta_user)
     if destination:
         st.session_state["pending_navigation"] = destination
