@@ -48,3 +48,16 @@ div[data-testid="stButton"] button[kind="secondary"]:hover{background:#f2f8f4!im
 [data-testid="stSegmentedControl"]{margin:.4rem 0 .75rem}
 [data-testid="stSegmentedControl"] button{min-height:46px!important;font-weight:700!important}
 @media(max-width:640px){.sa-hub-intro{border-radius:16px;padding:1rem}.sa-hub-intro h2{font-size:1.35rem!important}}
+
+/* v3.1.1: full masthead logo and controlled navigation panel */
+.sa-masthead{display:flex;align-items:center;gap:clamp(.75rem,2vw,1.4rem);padding:1rem .25rem 1.1rem;min-height:90px;border-bottom:1px solid #dbcba9;box-sizing:border-box}
+.sa-masthead-logo{flex:0 0 clamp(58px,6vw,76px);width:clamp(58px,6vw,76px);height:clamp(58px,6vw,76px);display:flex;align-items:center;justify-content:center;overflow:visible}
+.sa-masthead-logo svg{display:block;width:100%;height:100%;max-width:100%;max-height:100%;overflow:visible}
+.sa-masthead-text{min-width:0;flex:1}
+.sa-masthead-title{font-family:'Noto Sans Devanagari','DM Sans',sans-serif;font-size:clamp(1.08rem,2.2vw,1.65rem);font-weight:750;line-height:1.4;color:#154832;overflow-wrap:anywhere}
+.sa-masthead-tagline{font-size:clamp(.65rem,1.15vw,.83rem);letter-spacing:.08em;color:#526358;line-height:1.5}
+.st-key-compact_navigation_toolbar{padding:.8rem 0 .3rem!important}
+.st-key-compact_navigation_toolbar [data-testid="stButton"] button{min-height:44px!important}
+.st-key-navigation_menu_panel{max-width:360px!important;margin-top:.55rem!important}
+.st-key-navigation_menu_panel [data-testid="stButton"] button{text-align:left!important;justify-content:flex-start!important}
+@media(max-width:640px){.sa-masthead{gap:.7rem;padding:.65rem 0 .8rem;min-height:72px}.sa-masthead-logo{flex-basis:52px;width:52px;height:52px}.sa-masthead-title{font-size:1.03rem}.sa-masthead-tagline{font-size:.64rem;letter-spacing:.03em}.st-key-navigation_menu_panel{max-width:100%!important}}

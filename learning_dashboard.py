@@ -25,8 +25,10 @@ def _load_attempts(user_id):
     return result if isinstance(result, list) else []
 
 
-def render_dashboard(user):
-    with st.expander("📊 My Learning Dashboard", expanded=False):
+def render_dashboard(user, *, show_expander=True):
+    from contextlib import nullcontext
+    wrapper = st.expander("📊 My Learning Dashboard", expanded=False) if show_expander else nullcontext()
+    with wrapper:
         st.caption("Your personal quiz progress. Only you can see your learning activity; no AI tokens are used.")
         st.button("↻ Refresh dashboard", key="refresh_learning_dashboard", help="Reload saved quiz attempts from Supabase")
         try:

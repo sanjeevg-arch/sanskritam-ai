@@ -128,12 +128,18 @@ html { scroll-padding-top: 1rem; }
 }
 </style>""", unsafe_allow_html=True)
 
+# A single flex header prevents the logo from being clipped by a narrow column.
+# The SVG is bundled with the application, not user-supplied content.
 logo = (BASE / "assets" / "lotus.svg").read_text(encoding="utf-8")
-header_logo, header_name = st.columns([1, 11], vertical_alignment="center")
-with header_logo:
-    st.image(str(BASE / "assets" / "lotus.svg"), width=70)
-with header_name:
-    st.markdown('<div class="brand">संस्कृतम् AI · Sanskritam AI<small>DISCOVER · TRANSLATE · UNDERSTAND</small></div>', unsafe_allow_html=True)
+st.markdown(
+    '<div class="sa-masthead">'
+    '<div class="sa-masthead-logo">' + logo + '</div>'
+    '<div class="sa-masthead-text">'
+    '<div class="sa-masthead-title">संस्कृतम् AI · Sanskritam AI</div>'
+    '<div class="sa-masthead-tagline">DISCOVER · TRANSLATE · UNDERSTAND</div>'
+    '</div></div>',
+    unsafe_allow_html=True,
+)
 
 
 LANGUAGES = {
@@ -293,34 +299,39 @@ with header_account:
             clear_account_session()
             st.rerun()
 
-# Collapsible navigation: Streamlit's native popover provides a menu without
-# depending on unsupported JavaScript or internal sidebar DOM selectors.
-# A selection sets a pending destination and reruns the app, closing the menu.
+# Controlled inline navigation: selecting any item sets menu_open=False before
+# rerunning. Unlike a popover, this guarantees the menu is hidden after selection.
+def navigate(destination):
+    st.session_state["navigation_menu_open"] = False
+    st.session_state["pending_navigation"] = destination
+    st.rerun()
+
 with st.container(key="compact_navigation_toolbar"):
-    nav_left, nav_rest = st.columns([2, 9], vertical_alignment="center")
-    with nav_left:
-        with st.popover("☰ Menu", use_container_width=True):
+    if st.button(
+        "✕ Close menu" if st.session_state.get("navigation_menu_open", False) else "☰ Menu",
+        key="navigation_menu_toggle",
+        help="Open or close navigation",
+    ):
+        st.session_state["navigation_menu_open"] = not st.session_state.get("navigation_menu_open", False)
+        st.rerun()
+
+    if st.session_state.get("navigation_menu_open", False):
+        with st.container(border=True, key="navigation_menu_panel"):
             st.caption("Quick navigation")
             if st.button("🏠 Home · Translate", key="drawer_home", use_container_width=True):
-                st.session_state["pending_navigation"] = "🌐 Translate"
-                st.rerun()
+                navigate("🌐 Translate")
             if st.button("📚 Learn & Practice", key="drawer_learn_practice", use_container_width=True):
-                st.session_state["pending_navigation"] = "📚 Learn & Practice"
-                st.rerun()
+                navigate("📚 Learn & Practice")
             if st.button("🪷 Learning Journey", key="drawer_learning_journey", use_container_width=True):
-                st.session_state["pending_navigation"] = "🪷 Learning Journey"
-                st.rerun()
+                navigate("🪷 Learning Journey")
             if st.button("♿ Accessibility & Learning Settings", key="drawer_settings", use_container_width=True):
-                st.session_state["pending_navigation"] = "⚙️ Settings"
-                st.rerun()
+                navigate("⚙️ Settings")
             st.divider()
             if st.button("📊 My Learning Dashboard", key="drawer_learning_dashboard", use_container_width=True):
-                st.session_state["pending_navigation"] = "📊 My Learning Dashboard"
-                st.rerun()
+                navigate("📊 My Learning Dashboard")
             if is_admin(beta_user):
                 if st.button("💰 AI Cost & Admin Dashboard", key="drawer_admin_dashboard", use_container_width=True):
-                    st.session_state["pending_navigation"] = "💰 AI Cost & Admin Dashboard"
-                    st.rerun()
+                    navigate("💰 AI Cost & Admin Dashboard")
 
 
 # Preferences remain available on every page, but their widgets are only
@@ -424,7 +435,7 @@ if page == "🪷 Learning Journey":
 
 if page == "📊 My Learning Dashboard":
     st.header("📊 My Learning Dashboard")
-    render_dashboard(beta_user)
+    render_dashboard(beta_user, show_expander=False)
     st.stop()
 
 if page == "💰 AI Cost & Admin Dashboard":
@@ -433,7 +444,7 @@ if page == "💰 AI Cost & Admin Dashboard":
         st.error("Administrator access required.")
         st.stop()
     st.header("💰 AI Cost & Admin Dashboard")
-    render_admin_cost_dashboard(beta_user)
+    render_admin_cost_dashboard(beta_user, show_expander=False)
     st.stop()
 
 if page == "📚 Learn & Practice":

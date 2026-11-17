@@ -38,9 +38,11 @@ def fetch_usage(days=30, *, user=None):
         if len(batch)<1000: return rows,False
     return rows,True
 
-def render_admin_cost_dashboard(user):
+def render_admin_cost_dashboard(user, *, show_expander=True):
     if not is_admin(user): return
-    with st.expander('💰 AI Cost & Admin Dashboard · Admin only',expanded=False):
+    from contextlib import nullcontext
+    wrapper = st.expander('💰 AI Cost & Admin Dashboard · Admin only', expanded=False) if show_expander else nullcontext()
+    with wrapper:
         st.caption('Private usage data. Estimates are not OpenAI invoices. Costs for audio transcription and legacy rows may be unknown.')
         days=st.selectbox('Reporting window (UTC)',[7,30,90],index=1,key='admin_cost_days')
         if st.button('Refresh AI usage',key='admin_cost_refresh',use_container_width=True): st.rerun()
