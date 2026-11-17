@@ -304,11 +304,8 @@ with st.container(key="compact_navigation_toolbar"):
             if st.button("🏠 Home · Translate", key="drawer_home", use_container_width=True):
                 st.session_state["pending_navigation"] = "🌐 Translate"
                 st.rerun()
-            if st.button("📚 Learn", key="drawer_learn", use_container_width=True):
-                st.session_state["pending_navigation"] = "📚 Learn"
-                st.rerun()
-            if st.button("🧠 Practice", key="drawer_practice", use_container_width=True):
-                st.session_state["pending_navigation"] = "🧠 Practice"
+            if st.button("📚 Learn & Practice", key="drawer_learn_practice", use_container_width=True):
+                st.session_state["pending_navigation"] = "📚 Learn & Practice"
                 st.rerun()
             if st.button("🪷 Learning Journey", key="drawer_learning_journey", use_container_width=True):
                 st.session_state["pending_navigation"] = "🪷 Learning Journey"
@@ -372,7 +369,7 @@ if "pending_navigation" in st.session_state:
     st.session_state["main_navigation"] = st.session_state.pop("pending_navigation")
 
 page = st.session_state.get("main_navigation", "🌐 Translate")
-if page not in ("🏠 Home", "📚 Learn", "🌐 Translate", "🧠 Practice", "🪷 Learning Journey", "⚙️ Settings", "📊 My Learning Dashboard", "💰 AI Cost & Admin Dashboard"):
+if page not in ("🏠 Home", "📚 Learn", "🌐 Translate", "🧠 Practice", "📚 Learn & Practice", "🪷 Learning Journey", "⚙️ Settings", "📊 My Learning Dashboard", "💰 AI Cost & Admin Dashboard"):
     page = "🌐 Translate"
 # Never permit a stale or manually set session destination to bypass the admin guard.
 if page == "💰 AI Cost & Admin Dashboard" and not is_admin(beta_user):
@@ -382,6 +379,13 @@ if page == "💰 AI Cost & Admin Dashboard" and not is_admin(beta_user):
 # Redirect legacy Home destination to Translate.
 if page == "🏠 Home":
     page = "🌐 Translate"
+    st.session_state["main_navigation"] = page
+
+# Backwards-compatible destinations from Learning Journey and learning recommendations.
+# Set the selected section before the segmented widget is instantiated.
+if page in ("📚 Learn", "🧠 Practice"):
+    st.session_state["learning_hub_section"] = "Learn" if page == "📚 Learn" else "Practice"
+    page = "📚 Learn & Practice"
     st.session_state["main_navigation"] = page
 
 # A compact contextual introduction replaces the former full-page promotional hero.
@@ -432,21 +436,31 @@ if page == "💰 AI Cost & Admin Dashboard":
     render_admin_cost_dashboard(beta_user)
     st.stop()
 
-if page == "📚 Learn":
-    st.header("Learn Sanskrit")
-    st.caption("Continue your Sanskrit for Beginners journey, or follow your daily study plan.")
-    render_sanskrit_beginners(beta_user)
-    render_daily_plan(beta_user)
-    st.stop()
-
-if page == "🧠 Practice":
-    st.header("Practice & Review")
-    st.caption("Strengthen grammar and review words you've learned.")
-    render_grammar_lab(beta_user)
-    render_flashcards(beta_user, widget_id="dashboard")
-    with st.expander("📈 Unified learning progress", expanded=False):
-        render_unified_learning(beta_user)
-    render_dashboard(beta_user)
+if page == "📚 Learn & Practice":
+    st.markdown('''<section class="sa-page-intro"><div class="sa-eyebrow">YOUR SANSKRIT LEARNING SPACE</div><h1>Learn it. Practice it. Remember it<span class="sa-accent">.</span></h1><p>One place to build your Sanskrit foundation, put your knowledge to work, and keep making progress.</p></section>''', unsafe_allow_html=True)
+    st.session_state.setdefault("learning_hub_section", "Learn")
+    section = st.segmented_control(
+        "Choose your learning activity",
+        options=["Learn", "Practice"],
+        key="learning_hub_section",
+        selection_mode="single",
+        label_visibility="collapsed",
+    )
+    if section == "Practice":
+        st.markdown('''<section class="sa-hub-intro"><span class="sa-hub-kicker">PRACTICE & REINFORCE</span><h2>Turn what you know into confidence.</h2><p>Strengthen Sanskrit grammar, revisit vocabulary with flashcards, and track the skills you are building.</p></section>''', unsafe_allow_html=True)
+        st.markdown("#### 🧩 Grammar Practice")
+        render_grammar_lab(beta_user)
+        st.markdown("#### 🗂️ Vocabulary Review")
+        render_flashcards(beta_user, widget_id="dashboard")
+        with st.expander("📈 Unified learning progress", expanded=False):
+            render_unified_learning(beta_user)
+        render_dashboard(beta_user)
+    else:
+        st.markdown('''<section class="sa-hub-intro"><span class="sa-hub-kicker">LEARN & DISCOVER</span><h2>Build your Sanskrit foundation, one lesson at a time.</h2><p>Start with the Devanagari script, explore beginner-friendly lessons, and follow a daily study plan at your own pace.</p></section>''', unsafe_allow_html=True)
+        st.markdown("#### 📚 Guided Lessons")
+        render_sanskrit_beginners(beta_user)
+        st.markdown("#### 🌅 Daily Learning Plan")
+        render_daily_plan(beta_user)
     st.stop()
 
 st.markdown('<div class="sa-section-label">TRANSLATION STUDIO</div>', unsafe_allow_html=True)

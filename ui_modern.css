@@ -39,3 +39,12 @@ div[data-testid="stButton"] button[kind="secondary"]:hover{background:#f2f8f4!im
 @media(max-width:900px){.sa-brand small{display:none}.sa-page-intro:after{right:-2rem;font-size:12rem}.block-container{padding:1rem 1.2rem 4rem!important}}
 @media(max-width:640px){.block-container{padding:.75rem .85rem 4rem!important}.sa-brand{font-size:1.1rem;gap:.35rem}.sa-brand-mark{width:32px;height:32px;font-size:1.35rem;border-radius:10px}.st-key-account_toolbar [data-testid="stHorizontalBlock"]{flex-wrap:nowrap!important;gap:.4rem!important}.st-key-account_toolbar [data-testid="stHorizontalBlock"]>[data-testid="stColumn"]{flex:1 1 auto!important;min-width:0!important;width:auto!important}.st-key-account_toolbar [data-testid="stHorizontalBlock"]>[data-testid="stColumn"]:last-child{flex:0 1 45%!important}.st-key-account_toolbar [data-testid="stPopover"]>button{font-size:.75rem!important;padding:.4rem!important}.sa-page-intro{padding:1.2rem!important;margin:.75rem 0 1.1rem;border-radius:18px}.sa-page-intro:after{right:-1.4rem;top:-1.5rem;font-size:8rem}.sa-page-intro h1{font-size:clamp(1.65rem,7.3vw,2.3rem)!important}.sa-page-intro p{font-size:.94rem}.sa-workspace-heading h2{font-size:1.28rem!important}.st-key-compact_navigation_toolbar [data-testid="stHorizontalBlock"]{flex-wrap:nowrap!important}.st-key-compact_navigation_toolbar [data-testid="stHorizontalBlock"]>[data-testid="stColumn"]{flex:0 0 auto!important;width:auto!important;min-width:115px!important}}
 @media(prefers-reduced-motion:reduce){*,*:before,*:after{transition:none!important;animation:none!important;scroll-behavior:auto!important}}
+
+/* v3.1: cohesive Learn & Practice hub */
+.sa-hub-intro{background:#fff;border:1px solid var(--sa-border);border-radius:20px;padding:clamp(1.1rem,3vw,1.8rem);margin:1rem 0 1.4rem;box-shadow:0 5px 24px rgba(27,65,49,.035)}
+.sa-hub-kicker{font-size:.72rem;font-weight:800;letter-spacing:.13em;color:#438267}
+.sa-hub-intro h2{font-size:clamp(1.35rem,2.5vw,1.85rem)!important;margin:.45rem 0!important;line-height:1.25!important}
+.sa-hub-intro p{font-size:clamp(.94rem,1.4vw,1.02rem);line-height:1.65;color:var(--sa-muted);margin:0;max-width:720px}
+[data-testid="stSegmentedControl"]{margin:.4rem 0 .75rem}
+[data-testid="stSegmentedControl"] button{min-height:46px!important;font-weight:700!important}
+@media(max-width:640px){.sa-hub-intro{border-radius:16px;padding:1rem}.sa-hub-intro h2{font-size:1.35rem!important}}
