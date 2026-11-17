@@ -371,8 +371,9 @@ if simple_reading:
     st.markdown("<style>.sa-page-intro{display:none!important}.block-container{max-width:1000px!important}</style>", unsafe_allow_html=True)
 
 # v2.8.1: one primary destination per page, while keeping existing tools intact.
-from home_ux import render_home, next_beginner_lesson
+from home_ux import next_beginner_lesson
 from unified_learning import render_unified_learning
+from learning_journey import render_learning_journey
 
 # Navigation is controlled by Home page buttons, not a radio widget.
 # Keep the selected destination in session state across Streamlit reruns.
@@ -403,8 +404,6 @@ if page in ("📚 Learn", "🧠 Practice"):
 # Navigation stays available on every authenticated page.
 if page == "🌐 Translate":
     st.markdown('''<section class="sa-page-intro"><div class="sa-eyebrow">YOUR SANSKRIT WORKSPACE</div><h1>Translate with understanding<span class="sa-accent">.</span></h1><p>Go beyond words. Translate, discover meaning, and explore Sanskrit with confidence.</p></section>''', unsafe_allow_html=True)
-elif page == "🪷 Learning Journey":
-    st.markdown('''<section class="sa-page-intro"><div class="sa-eyebrow">YOUR LEARNING PATH</div><h1>Every step brings you closer<span class="sa-accent">.</span></h1><p>Pick up where you left off and celebrate your progress.</p></section>''', unsafe_allow_html=True)
 
 if page == "⚙️ Settings":
     for pref_key, default in {
@@ -426,11 +425,7 @@ if page == "⚙️ Settings":
     st.stop()
 
 if page == "🪷 Learning Journey":
-    destination = render_home(beta_user)
-    if destination:
-        st.session_state["pending_navigation"] = destination
-        st.rerun()
-    render_unified_learning(beta_user)
+    render_learning_journey(beta_user)
     st.stop()
 
 if page == "📊 My Learning Dashboard":

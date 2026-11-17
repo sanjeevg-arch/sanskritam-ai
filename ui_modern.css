@@ -61,3 +61,6 @@ div[data-testid="stButton"] button[kind="secondary"]:hover{background:#f2f8f4!im
 .st-key-navigation_menu_panel{max-width:360px!important;margin-top:.55rem!important}
 .st-key-navigation_menu_panel [data-testid="stButton"] button{text-align:left!important;justify-content:flex-start!important}
 @media(max-width:640px){.sa-masthead{gap:.7rem;padding:.65rem 0 .8rem;min-height:72px}.sa-masthead-logo{flex-basis:52px;width:52px;height:52px}.sa-masthead-title{font-size:1.03rem}.sa-masthead-tagline{font-size:.64rem;letter-spacing:.03em}.st-key-navigation_menu_panel{max-width:100%!important}}
+
+/* v3.2: readable roadmap actions on narrow screens */
+@media(max-width:640px){.st-key-navigation_menu_panel{max-width:100%!important}}
