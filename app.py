@@ -281,7 +281,9 @@ beta_user = auth_gate(show_heading=False)
 profile_email = str(beta_user.get("email", ""))
 profile_label = profile_email.split("@", 1)[0][:20] or "Account"
 with st.container(key="account_toolbar"):
-    header_space, header_account = st.columns([8, 3], vertical_alignment="center")
+    header_brand, header_account = st.columns([7, 2], vertical_alignment="center")
+with header_brand:
+    st.markdown('<div class="sa-brand"><span class="sa-brand-mark">✺</span><span>Sanskritam <b>AI</b></span><small>Translate · Learn · Grow</small></div>', unsafe_allow_html=True)
 with header_account:
     with st.popover("👤 " + profile_label, use_container_width=True):
         st.markdown("**Signed in as**")
@@ -323,7 +325,6 @@ with st.container(key="compact_navigation_toolbar"):
                     st.session_state["pending_navigation"] = "💰 AI Cost & Admin Dashboard"
                     st.rerun()
 
-st.markdown('<section class="hero"><div class="kicker">ANCIENT WISDOM · MODERN INTELLIGENCE</div><h1>Discover the Beauty of Sanskrit</h1><p>Translate across languages, explore each word, and learn the grammar behind the meaning.</p></section>', unsafe_allow_html=True)
 
 # Preferences remain available on every page, but their widgets are only
 # instantiated on the dedicated Settings page.
@@ -352,6 +353,15 @@ textarea{{font-size:{size_px}px!important}}
 </style>""", unsafe_allow_html=True)
 
 
+# UI v3: visual-only styles; existing quotas, auth, translation, and persistence are unchanged.
+with open(BASE / "ui_modern.css", encoding="utf-8") as _ui_style:
+    st.markdown("<style>" + _ui_style.read() + "</style>", unsafe_allow_html=True)
+
+if high_contrast:
+    st.markdown("<style>.stApp{background:#fff!important;color:#111!important}.sa-page-intro,.sa-brand,.sa-workspace-heading{color:#111!important}.sa-page-intro p{color:#111!important}.stButton button{border:2px solid #111!important}</style>", unsafe_allow_html=True)
+if simple_reading:
+    st.markdown("<style>.sa-page-intro{display:none!important}.block-container{max-width:1000px!important}</style>", unsafe_allow_html=True)
+
 # v2.8.1: one primary destination per page, while keeping existing tools intact.
 from home_ux import render_home, next_beginner_lesson
 from unified_learning import render_unified_learning
@@ -373,6 +383,13 @@ if page == "💰 AI Cost & Admin Dashboard" and not is_admin(beta_user):
 if page == "🏠 Home":
     page = "🌐 Translate"
     st.session_state["main_navigation"] = page
+
+# A compact contextual introduction replaces the former full-page promotional hero.
+# Navigation stays available on every authenticated page.
+if page == "🌐 Translate":
+    st.markdown('''<section class="sa-page-intro"><div class="sa-eyebrow">YOUR SANSKRIT WORKSPACE</div><h1>Translate with understanding<span class="sa-accent">.</span></h1><p>Go beyond words. Translate, discover meaning, and explore Sanskrit with confidence.</p></section>''', unsafe_allow_html=True)
+elif page == "🪷 Learning Journey":
+    st.markdown('''<section class="sa-page-intro"><div class="sa-eyebrow">YOUR LEARNING PATH</div><h1>Every step brings you closer<span class="sa-accent">.</span></h1><p>Pick up where you left off and celebrate your progress.</p></section>''', unsafe_allow_html=True)
 
 if page == "⚙️ Settings":
     for pref_key, default in {
@@ -432,8 +449,7 @@ if page == "🧠 Practice":
     render_dashboard(beta_user)
     st.stop()
 
-st.header("Translate & Explore")
-st.caption("Translate text, capture Sanskrit from an image or voice, and explore grammar.")
+st.markdown('<div class="sa-section-label">TRANSLATION STUDIO</div>', unsafe_allow_html=True)
 
 
 def iast(text: str) -> str:
@@ -447,7 +463,7 @@ def show_transliteration(text: str):
     if show_iast and text and re.search(r"[\u0900-\u097f]", text):
         st.caption("IAST transliteration: " + iast(text))
 
-st.subheader("📷 Image-to-Sanskrit Translation")
+st.markdown('<div class="sa-tool-label">📷 Image to text</div>', unsafe_allow_html=True)
 with st.expander("Upload an image of Sanskrit text", expanded=False):
     st.write("Upload a photo or scan containing Sanskrit text. AI will transcribe it into an editable text box; review it before translating.")
     image_file = st.file_uploader(
@@ -562,7 +578,7 @@ if 'history_pending_open' in st.session_state:
     st.session_state['last_example'] = (entry['direction'], 'Your own text')
     st.toast('Saved translation opened — no AI tokens used.')
 
-st.subheader("Translation workspace")
+st.markdown('<div class="sa-workspace-heading"><h2>Translation studio</h2><p>Enter a phrase or sentence, then explore the translation and its grammar.</p></div>', unsafe_allow_html=True)
 with st.container(border=True):
     direction = st.radio("Translation direction", ["Sanskrit → English", "English → Sanskrit"], horizontal=True, index=(["Sanskrit → English", "English → Sanskrit"].index(st.session_state.pop("history_restore_direction", "Sanskrit → English"))))
     target_languages = st.multiselect(
