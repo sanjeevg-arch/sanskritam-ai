@@ -60,30 +60,26 @@ def _milestone(label, achieved, goal, description):
 
 
 def _lesson_tile(lesson, data, progress):
+    """Small, genuinely clickable tile. Later lessons are available, not locked."""
     done = lesson['id'] in data['completed_ids']
     current = bool(data['next_lesson'] and lesson['id'] == data['next_lesson']['id'])
-    status = 'Completed' if done else 'Up next' if current else 'Available'
-    state_class = 'is-done' if done else 'is-current' if current else 'is-available'
+    icon = '✓' if done else '◉' if current else '○'
     st.markdown(
-        f'<div class="sa-journey-tile {state_class}">'
-        f'<div class="sa-journey-tile-top"><span class="sa-journey-number">{lesson["number"]:02}</span>'
-        f'<span class="sa-journey-status">{html.escape(status)}</span></div>'
-        f'<strong>{html.escape(lesson["title"])}</strong>'
-        f'<small>{html.escape(lesson["stage"])}</small></div>',
+        f'<div class="sa-journey-compact-tile {"is-done" if done else "is-current" if current else ""}" '
+        f'title="{html.escape(lesson["title"], quote=True)}">'
+        f'<span>{icon}</span><strong>{lesson["number"]}</strong></div>',
         unsafe_allow_html=True,
     )
-    if st.button('Review lesson' if done else 'Continue lesson' if current else 'Open lesson',
-                 key=f'journey_lesson_{lesson["id"]}', use_container_width=True,
-                 type='primary' if current else 'secondary'):
+    if st.button('Review' if done else 'Start', key=f'journey_lesson_{lesson["id"]}',
+                 use_container_width=True, type='primary' if current else 'secondary',
+                 help=f'Open Lesson {lesson["number"]}: {lesson["title"]}'):
         open_lesson(lesson, progress)
 
 
 def render_learning_journey(user):
     st.markdown(
-        '<section class="sa-journey-hero"><div class="sa-eyebrow">YOUR LEARNING JOURNEY</div>'
-        '<h1>Every lesson brings you closer.</h1>'
-        '<p>See your progress, pick up where you left off, and explore Sanskrit at your own pace.</p>'
-        '</section>', unsafe_allow_html=True,
+        '<section class="sa-journey-prototype-heading"><h2>🪷 Your Learning Journey</h2>'
+        '<p>Your path to understanding Sanskrit</p></section>', unsafe_allow_html=True,
     )
     try:
         progress = progress_for_current_user(user)
@@ -100,21 +96,33 @@ def render_learning_journey(user):
     completed, total = data['completed'], data['total']
     percent = round(100 * completed / total) if total else 0
 
-    st.markdown('### Your progress')
+    st.markdown('<div class="sa-journey-kicker">YOUR PROGRESS</div>', unsafe_allow_html=True)
     stats = st.columns(3, gap='small')
     with stats[0]:
-        _metric('Lessons completed', f'{completed} / {total}', f'{percent}% complete')
+        _metric('Lessons', f'{completed}/{total}', 'Completed')
     with stats[1]:
-        _metric('Devanagari', f'{data["script_completed"]} / 6', 'Script foundations')
+        _metric('Complete', f'{percent}%', 'Curriculum')
     with stats[2]:
-        _metric('Sanskrit essentials', f'{data["core_completed"]} / 12', 'Beyond the script')
-    st.progress(completed / total if total else 0, text=f'{percent}% of the 18-lesson curriculum complete')
+        milestone_count = sum((data['script_completed'] >= 6, data['core_completed'] >= 1,
+                               completed >= 9, completed >= total))
+        _metric('Milestones', milestone_count, 'Of 4 achieved')
+    st.progress(completed / total if total else 0, text=f'{completed} of {total} lessons complete')
 
-    st.markdown('### Continue your journey')
+    st.markdown('### Your lesson roadmap')
+    st.caption('Select any lesson to begin or review. All 18 lessons are available; later lessons are not locked.')
+    for title, lessons in [('Devanagari foundations', LESSONS[:6]),
+                           ('Sanskrit essentials', LESSONS[6:])]:
+        st.markdown(f'**{title}**')
+        for start in range(0, len(lessons), 6):
+            cols = st.columns(6, gap='small')
+            for col, lesson in zip(cols, lessons[start:start + 6]):
+                with col:
+                    _lesson_tile(lesson, data, progress)
+
     next_lesson = data['next_lesson']
     with st.container(border=True):
         if next_lesson:
-            st.caption('YOUR NEXT LESSON')
+            st.caption('UP NEXT · YOUR NEXT LESSON')
             st.markdown(f'#### {next_lesson["number"]:02}. {next_lesson["title"]}')
             st.write(next_lesson.get('description', 'Continue building your Sanskrit skills.'))
             st.caption('Learn → Explore → Practice → Review')
@@ -124,29 +132,6 @@ def render_learning_journey(user):
             st.success('You have completed your selected learning path. Excellent progress!')
             if st.button('Review the curriculum →', key='journey_review', use_container_width=True):
                 open_lesson(LESSONS[6] if skip else LESSONS[0], progress)
-
-    st.markdown('### Explore the lesson roadmap')
-    st.caption('Choose any lesson to begin or review. Lessons are always available, including Devanagari foundations.')
-    phase = st.segmented_control('Roadmap section',
-        options=['All lessons', 'Devanagari', 'Sanskrit essentials'],
-        default='All lessons', key='journey_phase_filter')
-    phases = [
-        ('01', 'Devanagari foundations', LESSONS[:6]),
-        ('02', 'Sanskrit essentials', LESSONS[6:]),
-    ]
-    for index, title, lessons in phases:
-        if phase == 'Devanagari' and index != '01':
-            continue
-        if phase == 'Sanskrit essentials' and index != '02':
-            continue
-        finished = sum(lesson['id'] in data['completed_ids'] for lesson in lessons)
-        st.markdown(f'#### {index} · {title}  ·  {finished}/{len(lessons)}')
-        # Compact 3-column visual tiles on desktop; Streamlit stacks columns on narrow screens.
-        for start in range(0, len(lessons), 3):
-            cols = st.columns(3, gap='small')
-            for col, lesson in zip(cols, lessons[start:start + 3]):
-                with col:
-                    _lesson_tile(lesson, data, progress)
 
     st.markdown('### Milestones worth celebrating')
     milestones = [

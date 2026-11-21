@@ -84,3 +84,18 @@ div[data-testid="stButton"] button[kind="secondary"]:hover{background:#f2f8f4!im
 .sa-journey-milestone.is-done .sa-journey-milestone-icon{background:#d6ecdb;color:#146440}
 .sa-journey-milestone strong{font-size:.94rem;color:#204b39}.sa-journey-milestone p{margin:.25rem 0;color:#687f71;font-size:.79rem}.sa-journey-milestone span{font-size:.74rem;font-weight:750;color:#337654}
 @media(max-width:640px){.sa-journey-hero{border-radius:17px;padding:1.2rem}.sa-journey-stat{min-height:105px;padding:.7rem}.sa-journey-stat span{font-size:.68rem}.sa-journey-stat strong{font-size:1.25rem}.sa-journey-stat small{font-size:.65rem}.sa-journey-tile{min-height:120px}.sa-journey-milestone{min-height:90px}}
+
+/* v3.2.2 compact prototype-aligned Learning Journey */
+.sa-journey-prototype-heading{padding:.5rem .15rem 1rem}
+.sa-journey-prototype-heading h2{font-size:1.6rem!important;margin:0!important;color:#174a38}
+.sa-journey-prototype-heading p{font-size:.88rem;color:#65766e;margin:.25rem 0 0}
+.sa-journey-kicker{font-size:.72rem;font-weight:800;letter-spacing:.12em;color:#557668;margin:.5rem 0}
+.sa-journey-stat{min-height:95px!important;padding:.75rem!important;align-items:center;text-align:center;justify-content:center;gap:.15rem!important}
+.sa-journey-stat strong{order:-1;font-size:clamp(1.2rem,2.8vw,1.9rem)!important}
+.sa-journey-stat span{font-size:.78rem!important}
+.sa-journey-stat small{font-size:.66rem!important}
+.sa-journey-compact-tile{height:55px;border:1px solid #d9e2dc;border-radius:10px 10px 0 0;display:flex;flex-direction:column;align-items:center;justify-content:center;background:#f7f9f7;gap:2px}
+.sa-journey-compact-tile.is-done{background:#dfece6;border-color:#c5d9cf;color:#186142}
+.sa-journey-compact-tile.is-current{background:#f4ebd9;border-color:#dfcfaa;color:#805d1d}
+.sa-journey-compact-tile span{font-size:1rem;line-height:1.1}.sa-journey-compact-tile strong{font-size:.7rem}
+@media(max-width:640px){.sa-journey-compact-tile{height:44px}.sa-journey-prototype-heading h2{font-size:1.3rem!important}}
