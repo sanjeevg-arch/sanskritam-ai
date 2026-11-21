@@ -64,3 +64,23 @@ div[data-testid="stButton"] button[kind="secondary"]:hover{background:#f2f8f4!im
 
 /* v3.2: readable roadmap actions on narrow screens */
 @media(max-width:640px){.st-key-navigation_menu_panel{max-width:100%!important}}
+
+/* v3.2.1 — visual, responsive Learning Journey */
+.sa-journey-hero{border-radius:24px;padding:clamp(1.3rem,3.3vw,2.5rem);background:linear-gradient(115deg,#eaf5ec,#f8fbf5 58%,#fff6e7);border:1px solid #e0e9df;margin:1rem 0 1.6rem}
+.sa-journey-hero h1{font-size:clamp(1.75rem,3.8vw,2.8rem)!important;letter-spacing:-.045em;margin:.35rem 0 .65rem!important;line-height:1.15!important}
+.sa-journey-hero p{font-size:1rem;line-height:1.6;color:#52705f;max-width:620px;margin:0}
+.sa-journey-stat{background:#fff;border:1px solid #dfe9e0;border-radius:18px;padding:clamp(.8rem,2vw,1.35rem);min-height:126px;display:flex;flex-direction:column;gap:.3rem}
+.sa-journey-stat span{color:#557064;font-size:.8rem;font-weight:650}.sa-journey-stat strong{font-size:clamp(1.4rem,3vw,2rem);color:#164f39;line-height:1.2}.sa-journey-stat small{color:#73857b;font-size:.76rem}
+.sa-journey-tile{min-height:148px;display:flex;flex-direction:column;gap:.5rem;padding:1rem;border-radius:16px 16px 6px 6px;background:#fff;border:1px solid #e0e9e0;border-bottom:0;margin-top:.35rem}
+.sa-journey-tile.is-done{background:#f2f9f3;border-color:#c9e3d0}.sa-journey-tile.is-current{background:#fff9ed;border-color:#e6cda0}
+.sa-journey-tile-top{display:flex;justify-content:space-between;align-items:center;gap:.4rem}
+.sa-journey-number{width:34px;height:34px;border-radius:11px;background:#eaf2eb;display:flex;align-items:center;justify-content:center;font-size:.85rem;font-weight:800;color:#255c42}
+.sa-journey-tile.is-done .sa-journey-number{background:#d5eadb}.sa-journey-tile.is-current .sa-journey-number{background:#f2dfb9}
+.sa-journey-status{font-size:.69rem;color:#4f7a60;font-weight:750}.sa-journey-tile.is-current .sa-journey-status{color:#99621f}
+.sa-journey-tile strong{font-size:.96rem;color:#173f31;line-height:1.35;overflow-wrap:anywhere}.sa-journey-tile small{margin-top:auto;color:#718479}
+.sa-journey-milestone{border:1px solid #e1e9e1;border-radius:16px;background:#fff;min-height:112px;padding:1rem;display:flex;align-items:flex-start;gap:.85rem;margin:.25rem 0}
+.sa-journey-milestone.is-done{background:#f3faf4;border-color:#cfe6d4}
+.sa-journey-milestone-icon{flex:0 0 36px;height:36px;border-radius:50%;display:flex;align-items:center;justify-content:center;background:#e9eee9;color:#50715c;font-weight:800}
+.sa-journey-milestone.is-done .sa-journey-milestone-icon{background:#d6ecdb;color:#146440}
+.sa-journey-milestone strong{font-size:.94rem;color:#204b39}.sa-journey-milestone p{margin:.25rem 0;color:#687f71;font-size:.79rem}.sa-journey-milestone span{font-size:.74rem;font-weight:750;color:#337654}
+@media(max-width:640px){.sa-journey-hero{border-radius:17px;padding:1.2rem}.sa-journey-stat{min-height:105px;padding:.7rem}.sa-journey-stat span{font-size:.68rem}.sa-journey-stat strong{font-size:1.25rem}.sa-journey-stat small{font-size:.65rem}.sa-journey-tile{min-height:120px}.sa-journey-milestone{min-height:90px}}
